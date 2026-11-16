@@ -12,8 +12,9 @@ Live at **walshclassroom.com/light-lab/**. No sign-in, and nothing is sent anywh
 |---|---|---|
 | 0 | Plan | Approved Nov 16 2026 (`docs/LIGHT_LAB_PHASE0_PLAN.md`) |
 | 1 | Rendering spike | Done: renderer B chosen (`docs/PHASE1_SPIKE_RESULTS.md`, test page in `spike/`) |
-| 2 | Core sandbox | Built, waiting for Tom's approval |
-| 3+ | Gear, learning layer, accounts, … | Not started |
+| 2 | Core sandbox | Approved Nov 16 2026 |
+| 3 | Gear and modifiers | Not started: needs the real gear specs |
+| 4+ | Learning layer, accounts, … | Not started |
 
 ## Using it
 
