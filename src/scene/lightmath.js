@@ -94,7 +94,7 @@ function shutterLimits(l, dir, coneDeg) {
   };
 }
 
-const GOBO_INDEX = { window: 1, blinds: 2, dots: 3, branches: 4 };
+const GOBO_INDEX = { window: 1, blinds: 2, dots: 3, branches: 4, "window-small": 5, "window-arched": 6, "blinds-wide": 7, underwater: 8 };
 
 // Every light the renderers draw: fixtures, plus reflectors bouncing light back.
 export function resolveLights(state) {

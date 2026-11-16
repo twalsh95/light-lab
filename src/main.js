@@ -124,17 +124,16 @@ history.subscribe((s, why) => {
   if (why === "redo") announce("Redone.");
 });
 
-// Presets keep the current mode, and in Room mode move to the matching station.
+// Presets keep the current mode.
 for (const [key, p] of Object.entries(PRESETS)) {
   const b = document.createElement("button");
   b.type = "button"; b.textContent = p.label; b.className = "preset";
   b.addEventListener("click", () => {
     const next = p.build(), mode = history.state.mode;
     next.mode = mode;
-    if (mode === "room" && key === "blank") next.station = history.state.station;
     history.replace(next);
     panels.select(next.lights[0]?.id || null); refresh();
-    announce(`${p.label} preset${mode === "room" && key !== "blank" ? " at the " + next.station.replace("-", " ") + " station" : ""}. Undo goes back to your setup.`);
+    announce(`${p.label} preset. Undo goes back to your setup.`);
   });
   $("presets").append(b);
 }

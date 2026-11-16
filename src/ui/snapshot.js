@@ -1,7 +1,7 @@
 // Snapshot: the portrait, the lighting diagram and the settings on one page, saved as a
 // PNG or a one-page PDF (for Google Classroom). Made entirely in the browser.
 import { ROLES } from "../scene/schema.js";
-import { gear, fixture, modifier, reflectorItem, stationName } from "../scene/gear.js";
+import { gear, fixture, modifier, reflectorItem } from "../scene/gear.js";
 import { lightSpec, mapPoint, backdropLightPosition } from "../scene/lightmath.js";
 import { SHAPE_PATHS, MAP_VIEW } from "./map.js";
 
@@ -15,7 +15,7 @@ function sideText(az) {
 }
 export function settingsLines(s) {
   const G = gear(), lines = [];
-  lines.push(s.mode === "room" ? `Room mode · ${stationName(s.station)}` : "Open studio");
+  lines.push(s.mode === "room" ? "Room mode (our real gear)" : "Open studio");
   const n = {};
   for (const l of s.lights) {
     const spec = lightSpec(l, s), f = fixture(l.fixture), m = modifier(l.modifier);

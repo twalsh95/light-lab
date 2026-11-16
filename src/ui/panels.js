@@ -1,8 +1,8 @@
-// Settings panels: Studio (mode, station, add gear), the selected light or reflector,
+// Settings panels: Studio (mode, add gear), the selected light or reflector,
 // Subject, Backdrop and Camera. Every number has a slider and a number box, so students
 // can drag or type: the same goal, different means.
 import { ROLES, SIDES, LIMITS, makeLight, makeReflector, newId } from "../scene/schema.js";
-import { gear, fixture, modifier, reflectorItem, STATIONS, stationName, inventory, inventoryProblems, remaining } from "../scene/gear.js";
+import { gear, fixture, modifier, reflectorItem, inventory, inventoryProblems, remaining } from "../scene/gear.js";
 import { lightSpec } from "../scene/lightmath.js";
 
 let uid = 0;
@@ -59,11 +59,9 @@ export function createPanels(els, history, { onSelect, announce }) {
   const onRefl = (fn, group) => grouped((s, v) => { const r = findRefl(s); if (r) fn(r, v, s); }, group);
   const restoreFocus = (key) => { if (!key) return; const e = els.inspector.querySelector(`[data-key="${key}"]`); e?.focus(); };
 
-  // ----- Studio: mode, station, add gear -----
+  // ----- Studio: mode, add gear -----
   const modeRow = selectRow({ key: "mode", label: "Mode", options: [["room", "Room mode: only the gear we have"], ["open", "Open studio: unlimited gear"]],
     get: (s) => s.mode, set: (v) => change((s) => { s.mode = v; if (v === "room") s.lights.forEach((l) => { l.sizeOverride = null; }); }) });
-  const stationRow = selectRow({ key: "station", label: "Station", options: STATIONS.map((id) => [id, stationName(id)]),
-    get: (s) => s.station, set: (v) => change((s) => { s.station = v; }) });
   const problems = h("ul", { class: "problems", "aria-live": "polite" });
   const invList = h("p", { class: "hint inventory" });
   const addFixture = h("select", { "aria-label": "Fixture to add" });
@@ -72,7 +70,7 @@ export function createPanels(els, history, { onSelect, announce }) {
   const addBtn = h("button", { type: "button", class: "solid", onclick: () => addLight() }, "Add light");
   const addRefl = h("select", { "aria-label": "Reflector to add" });
   const addReflBtn = h("button", { type: "button", onclick: () => addReflector() }, "Add reflector");
-  els.studio.append(modeRow.row, stationRow.row, problems,
+  els.studio.append(modeRow.row, problems,
     h("div", { class: "addrow" }, h("label", {}, "Add a light"), addFixture, addRole, addBtn),
     h("div", { class: "addrow" }, h("label", {}, "Add a reflector"), addRefl, addReflBtn),
     invList);
@@ -108,7 +106,7 @@ export function createPanels(els, history, { onSelect, announce }) {
     for (const [id, f] of Object.entries(G().fixtures)) {
       if (f.openOnly && s.mode !== "open") continue;
       const left = remaining(s, "fixtures", id);
-      if (s.mode === "room" && (inventory(s.station).fixtures[id] || 0) === 0) continue;
+      if (s.mode === "room" && (inventory().fixtures[id] || 0) === 0) continue;
       addFixture.append(h("option", { value: id, disabled: left <= 0 }, f.name + (s.mode === "room" ? ` (${Math.max(0, left)} free)` : "")));
     }
     const firstFree = [...addFixture.options].find((o) => !o.disabled);
@@ -117,7 +115,7 @@ export function createPanels(els, history, { onSelect, announce }) {
     addRefl.innerHTML = "";
     for (const [id, it] of Object.entries(G().reflectors)) {
       const left = remaining(s, "reflectors", id);
-      if (s.mode === "room" && (inventory(s.station).reflectors[id] || 0) === 0) continue;
+      if (s.mode === "room" && (inventory().reflectors[id] || 0) === 0) continue;
       for (const [side, sd] of Object.entries(it.sides)) if (sd.reflect > 0) addRefl.append(h("option", { value: `${id}:${side}`, disabled: left <= 0 }, sd.name.replace(" (bounce)", "") + ` (${it.name})`));
     }
     const firstRefl = [...addRefl.options].find((o) => !o.disabled);
@@ -142,7 +140,7 @@ export function createPanels(els, history, { onSelect, announce }) {
     out.push(checkRow({ key: "on", label: "On", get: () => !!findLight(history.state)?.on, set: (v) => change((st) => { findLight(st).on = v; }) }));
     const noDimmer = room && !f.dimmable;
     out.push(numberRow({ key: "power", label: "Power", min: 0, max: 1, step: 1, unit: "%", scale: 100, disabled: noDimmer,
-      hint: noDimmer ? "No dimmer on this light. To change how bright it is, move it, spot or flood it, or use the barn doors." : null,
+      hint: noDimmer ? "This light has no dimmer. To change how bright it is, move it, use the focus dial (spot or flood), or fold in the barn doors." : null,
       get: (st) => findLight(st)?.power ?? 0, set: onLight((x, v) => { x.power = v; x.on = true; }, "power-" + l.id) }));
     if (l.role !== "backdrop") {
       out.push(numberRow({ key: "az", label: "Around", hint: "0° is beside the camera. Negative is camera-left, positive is camera-right, ±180° is behind.",
@@ -158,7 +156,7 @@ export function createPanels(els, history, { onSelect, announce }) {
     else out.push(numberRow({ key: "size", label: "Size", hint: "Small = hard light, crisp shadows. Big = soft light, gentle shadows.",
       min: LIMITS.size[0], max: LIMITS.size[1], step: 1, unit: "cm", scale: 100, get: (st) => { const x = findLight(st); return x ? lightSpec(x, st).size : 0.5; },
       set: onLight((x, v) => { x.sizeOverride = v; }, "size-" + l.id) }));
-    if (f.beamDeg) out.push(numberRow({ key: "flood", label: "Spot ↔ flood", hint: "Spot: a narrow, brighter beam. Flood: a wide, dimmer one.",
+    if (f.beamDeg) out.push(numberRow({ key: "flood", label: "Spot ↔ flood", hint: "The focus dial on the back moves the bulb toward or away from the lens. Spot: a narrow, brighter beam. Flood: a wide, dimmer one.",
       min: 0, max: 1, step: 1, unit: "%", scale: 100, get: (st) => findLight(st)?.flood ?? 0.5, set: onLight((x, v) => { x.flood = v; }, "flood-" + l.id) }));
     // Colour
     if (f.kelvin[0] === f.kelvin[1]) out.push(textRow("Colour", `${f.kelvin[0]} K: warm halogen light, fixed.`));
@@ -224,7 +222,7 @@ export function createPanels(els, history, { onSelect, announce }) {
     const l = findLight(s), r = findRefl(s);
     // Rebuild only when what's offered changes (not on every slider move), so focus stays put.
     const gearInUse = s.lights.map((x) => x.fixture + "/" + x.modifier + "/" + !!x.flag).join(",") + s.reflectors.map((x) => x.item).join(",");
-    const sig = l ? ["L", l.id, l.fixture, l.modifier, l.role, l.color.mode, !!l.flag, s.mode, s.station, gearInUse].join("|")
+    const sig = l ? ["L", l.id, l.fixture, l.modifier, l.role, l.color.mode, !!l.flag, s.mode, gearInUse].join("|")
       : r ? ["R", r.id].join("|") : "none|" + s.lights.length;
     if (sig === signature) return;
     const focusKey = els.inspector.contains(document.activeElement) ? document.activeElement.getAttribute("data-key") : null;
@@ -277,22 +275,21 @@ export function createPanels(els, history, { onSelect, announce }) {
     update(s) {
       if (selected && !findLight(s) && !findRefl(s)) selected = null;
       if (!selected && s.lights.length) selected = s.lights[0].id;
-      modeRow.update(s); stationRow.update(s);
-      stationRow.row.hidden = s.mode !== "room";
+      modeRow.update(s);
       const probs = inventoryProblems(s);
       problems.innerHTML = "";
       probs.forEach((p) => problems.append(h("li", {}, p)));
       problems.hidden = !probs.length;
       if (s.mode === "room") {
-        const inv = inventory(s.station);
-        invList.textContent = `${stationName(s.station)} has: ` + Object.entries(inv.fixtures).filter(([, n]) => n > 0).map(([id, n]) => `${n} × ${fixture(id).short}`).join(", ") + ".";
+        const inv = inventory();
+        invList.textContent = "The room has: " + Object.entries(inv.fixtures).filter(([, n]) => n > 0).map(([id, n]) => `${n} × ${fixture(id).short}`).join(", ") + ".";
       } else invList.textContent = "Open studio: any gear, any amount, and any light size. Numbers are still real.";
       fillAddMenus(s);
       buildInspector(s);
       rows.forEach((r) => r.update(s));
       skinRow.update(s); clothRow.update(s);
-      // Backdrop choices: the station's backdrops in Room mode; all of them, plus any grey, in Open studio.
-      const types = s.mode === "room" ? inventory(s.station).backdrops : [...Object.keys(G().backdrops), "custom"];
+      // Backdrop choices: the room's backdrops in Room mode; those plus any grey in Open studio.
+      const types = s.mode === "room" ? inventory().backdrops : [...Object.keys(G().backdrops), "custom"];
       const want = types.includes(s.backdrop.type) ? types : [...types, s.backdrop.type];
       if (bdType.dataset.sig !== want.join()) {
         bdType.innerHTML = "";

@@ -90,14 +90,24 @@ await test("azimuth -90 is camera-left; map drag round-trips", () => {
 });
 
 // ---------- Gear ----------
-await test("every preset fits its station's real gear in Room mode", () => {
+await test("every preset uses only gear the room really has", () => {
   for (const [k, p] of Object.entries(PRESETS)) { const s = p.build(); s.mode = "room"; same(inventoryProblems(s), [], k); }
 });
-await test("Room mode notices a third CB60 at the Three-Point station", () => {
+await test("Room mode notices a third CB60 (the room has two)", () => {
   const s = PRESETS.threePoint.build();
   s.lights.push(makeLight({ id: "x", fixture: "cb60-rgb" }));
   ok(inventoryProblems(s).some((p) => /CB60/.test(p)), JSON.stringify(inventoryProblems(s)));
   s.mode = "open"; same(inventoryProblems(s), []);
+});
+await test("every gobo in the gear list has a pattern in the 3D view", () => {
+  for (const g of Object.keys(gear().gobos)) {
+    const s = keyOnly({ fixture: "cb60-rgb", modifier: "gobo", gobo: g });
+    ok(L.resolveLights(s)[0].gobo > 0, g);
+  }
+});
+await test("Switti S45 RGB uses its published specs", () => {
+  const f = fixture("s45-rgb");
+  ok(f.luxAt1m === 2050 && f.kelvin[0] === 2600 && f.kelvin[1] === 10000 && f.rgb && f.dimmable);
 });
 await test("gear list is consistent: default modifiers fit, every fixture has a source", () => {
   for (const [id, f] of Object.entries(gear().fixtures)) {

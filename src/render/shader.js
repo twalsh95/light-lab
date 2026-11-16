@@ -92,6 +92,21 @@ float gobo(int id, vec2 uv){
   if (id == 2) return smoothstep(0.15, 0.35, abs(fract(uv.y * 3.5) - 0.5) * 2.0);          // blinds
   if (id == 3) return 1.0 - smoothstep(0.2, 0.3, length(fract(uv * 2.5) - 0.5));         // dots
   if (id == 4) return smoothstep(0.2, 0.4, abs(fract((uv.x + uv.y) * 2.2) - 0.5) * 2.0);  // diagonal bars
+  if (id == 5){ // window with small panes (three by three)
+    vec2 g = abs(fract(uv * 3.2 + 0.5) - 0.5);
+    return smoothstep(0.05, 0.09, min(g.x, g.y)) * step(max(abs(uv.x), abs(uv.y)), 0.86);
+  }
+  if (id == 6){ // arched window: rectangle with a round top, two crossing glazing bars
+    bool inside = (uv.y < 0.15 && abs(uv.x) < 0.5 && uv.y > -0.85) || length(vec2(uv.x, uv.y - 0.15)) < 0.5;
+    float bars = smoothstep(0.02, 0.045, abs(uv.x)) * smoothstep(0.02, 0.045, abs(uv.y + 0.3));
+    return inside ? bars : 0.0;
+  }
+  if (id == 7) return smoothstep(0.25, 0.45, abs(fract(uv.y * 2.0) - 0.5) * 2.0);            // wide blinds
+  if (id == 8){ // underwater: rippling bright lines over a dimmer wash
+    vec2 q = uv * 3.0;
+    float w = sin(q.x * 2.1 + sin(q.y * 1.7) * 1.6) + sin(q.y * 2.4 + sin(q.x * 1.3) * 1.8) + sin((q.x + q.y) * 1.6);
+    return 0.3 + 0.7 * pow(1.0 - abs(w) / 3.0, 6.0);
+  }
   return 1.0;
 }
 // Barn doors, flags and gobos: how much of the beam reaches this point.

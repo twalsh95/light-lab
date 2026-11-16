@@ -51,7 +51,7 @@ export function makeReflector(o) {
 export function blankScene() {
   return {
     version: VERSION,
-    mode: "room", station: "all",
+    mode: "room",
     subject: { model: "clay-head", skin: "clay", clothing: "match" },
     camera: { autoExposure: true, evCompensation: 0, manualExposure: 1, whiteBalance: "daylight" },
     backdrop: { type: "white", brightness: 0.5, distance: 1.0 },
@@ -61,14 +61,14 @@ export function blankScene() {
   };
 }
 
-// Presets use only the gear at the matching station, so they work in Room mode.
+// Presets use only real gear, so they work in Room mode.
 export const PRESETS = {
   threePoint: {
     label: "Three-point",
     build() {
       const s = blankScene();
       // White paper 1.8 m back reads mid-grey: only the key's spill reaches it (falloff).
-      s.station = "three-point"; s.backdrop = { type: "white", brightness: 0.5, distance: 1.8 };
+      s.backdrop = { type: "white", brightness: 0.5, distance: 1.8 };
       s.lights = [
         makeLight({ id: "key", role: "key", fixture: "cb60-rgb", modifier: "cb60-softbox", power: 1, azimuthDeg: -45, elevationDeg: 30, distance: 1.5 }),
         makeLight({ id: "fill", role: "fill", fixture: "d50", power: 1, azimuthDeg: 40, elevationDeg: 5, distance: 1.2 }),
@@ -81,7 +81,7 @@ export const PRESETS = {
     label: "High-key",
     build() {
       const s = blankScene();
-      s.station = "high-key"; s.backdrop = { type: "white", brightness: 0.9, distance: 1.2 };
+      s.backdrop = { type: "white", brightness: 0.9, distance: 1.2 };
       s.room.ambient = 0.012; s.camera.evCompensation = 0.5;
       s.lights = [
         makeLight({ id: "key", role: "key", fixture: "torjim-85", power: 1, azimuthDeg: -30, elevationDeg: 25, distance: 0.9, kelvin: 5600 }),
@@ -95,7 +95,7 @@ export const PRESETS = {
     label: "Low-key",
     build() {
       const s = blankScene();
-      s.station = "low-key"; s.backdrop = { type: "black", brightness: 0.03, distance: 2.0 };
+      s.backdrop = { type: "black", brightness: 0.03, distance: 2.0 };
       s.camera.whiteBalance = "tungsten";   // halogen key: set the camera to match
       s.room.ambient = 0;
       s.lights = [
@@ -139,7 +139,6 @@ export function normalize(input) {
   const G = gear();
   const s = blankScene();
   s.mode = input.mode === "open" ? "open" : "room";
-  s.station = ["all", ...Object.keys(G.stations).filter((k) => k !== "notes" && k !== "estimate")].includes(input.station) ? input.station : "all";
   const sub = input.subject || {};
   s.subject.skin = oneOf(sub.skin, G.skins, "clay");
   s.subject.clothing = oneOf(sub.clothing, G.clothing, "match");

@@ -17,18 +17,10 @@ export const fixture = (id) => gear().fixtures[id];
 export const modifier = (id) => gear().modifiers[id];
 export const reflectorItem = (id) => gear().reflectors[id];
 
-export const STATIONS = ["all", "three-point", "high-key", "low-key"];
-export function stationName(id) {
-  return id === "all" ? "Whole room" : gear().stations[id]?.name || id;
-}
-
-// What a station (or the whole room) has: { fixtures: {id: n}, modifiers: {...}, reflectors: {...}, backdrops: [...] }
-export function inventory(station) {
+// What the room has: { fixtures: {id: n}, modifiers: {...}, reflectors: {...}, backdrops: [...] }.
+// All of Tom's gear is available to use; there's no split by station.
+export function inventory() {
   const g = gear();
-  if (station && station !== "all" && g.stations[station]) {
-    const s = g.stations[station];
-    return { fixtures: { ...s.fixtures }, modifiers: { ...s.modifiers }, reflectors: { ...s.reflectors }, backdrops: [...s.backdrops] };
-  }
   const pick = (obj) => Object.fromEntries(Object.entries(obj).filter(([, v]) => !v.openOnly).map(([k, v]) => [k, v.count ?? 0]));
   return { fixtures: pick(g.fixtures), modifiers: pick(g.modifiers), reflectors: pick(g.reflectors), backdrops: Object.keys(g.backdrops) };
 }
@@ -50,8 +42,8 @@ export function usage(state) {
 // Problems with the scene in Room mode, as plain sentences. Empty in Open studio.
 export function inventoryProblems(state) {
   if (state.mode !== "room") return [];
-  const inv = inventory(state.station), u = usage(state), out = [];
-  const where = state.station === "all" ? "the room" : "this station";
+  const inv = inventory(), u = usage(state), out = [];
+  const where = "the room";
   for (const [bucket, label] of [["fixtures", fixture], ["modifiers", modifier], ["reflectors", reflectorItem]]) {
     for (const [id, n] of Object.entries(u[bucket])) {
       const have = inv[bucket][id] || 0, unlimited = bucket === "modifiers" && modifier(id)?.count >= 99;
@@ -66,5 +58,5 @@ export function inventoryProblems(state) {
 export function remaining(state, bucket, id) {
   if (state.mode !== "room") return Infinity;
   if (bucket === "modifiers" && modifier(id)?.count >= 99) return Infinity;
-  return (inventory(state.station)[bucket][id] || 0) - (usage(state)[bucket][id] || 0);
+  return (inventory()[bucket][id] || 0) - (usage(state)[bucket][id] || 0);
 }

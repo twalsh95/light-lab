@@ -18,8 +18,8 @@ Live at **walshclassroom.com/light-lab/**. No sign-in, and nothing is sent anywh
 
 ## Using it
 
-- **Room mode** uses only the real gear (`data/gear.json`), at one station or the whole room. **Open studio** has unlimited gear and any light size.
-- **Presets:** Three-point, High-key, Low-key, Blank studio. In Room mode each preset uses its station's gear. Undo brings your own setup back.
+- **Room mode** uses only the real gear in the room (`data/gear.json`). **Open studio** has unlimited gear and any light size.
+- **Presets:** Three-point, High-key, Low-key, Blank studio, all built from the real gear. Undo brings your own setup back.
 - **Studio panel:** add a light (fixture + role: key, fill, back, hair, accent, backdrop) or a reflector (white, silver, gold).
 - **Map ("Studio from above"):** drag a light around the subject. With the keyboard: Tab to a light, then arrow keys move it (Shift for small steps), `+` and `-` change power, Space turns it on or off.
 - **Selected light:** role, fixture, modifier, power, around, height, distance; size (Open studio); spot/flood (Fresnels); warm/cool or RGB colour; gel (snoot); gobo pattern; barn doors (Fresnels); black flag. Each number has a slider and a number box.
