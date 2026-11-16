@@ -50,6 +50,7 @@ function textRow(label, text) { return { row: h("div", { class: "row text" }, h(
 
 export function createPanels(els, history, { onSelect, announce }) {
   let selected = null, signature = "", rows = [];
+  const openSections = new Set();
   const G = () => gear();
   const findLight = (s, id = selected) => s.lights.find((l) => l.id === id);
   const findRefl = (s, id = selected) => s.reflectors.find((r) => r.id === id);
@@ -59,20 +60,18 @@ export function createPanels(els, history, { onSelect, announce }) {
   const onRefl = (fn, group) => grouped((s, v) => { const r = findRefl(s); if (r) fn(r, v, s); }, group);
   const restoreFocus = (key) => { if (!key) return; const e = els.inspector.querySelector(`[data-key="${key}"]`); e?.focus(); };
 
-  // ----- Studio: mode, add gear -----
-  const modeRow = selectRow({ key: "mode", label: "Mode", options: [["room", "Room mode: only the gear we have"], ["open", "Open studio: unlimited gear"]],
-    get: (s) => s.mode, set: (v) => change((s) => { s.mode = v; if (v === "room") s.lights.forEach((l) => { l.sizeOverride = null; }); }) });
+  // ----- Adding gear (lives under the map) -----
   const problems = h("ul", { class: "problems", "aria-live": "polite" });
   const invList = h("p", { class: "hint inventory" });
-  const addFixture = h("select", { "aria-label": "Fixture to add" });
-  const addRole = h("select", { "aria-label": "Role of the new light" });
+  const addFixture = h("select", { "aria-label": "Light to add" });
+  const addRole = h("select", { "aria-label": "Its job" });
   for (const [k, r] of Object.entries(ROLES)) addRole.append(h("option", { value: k }, r.label));
-  const addBtn = h("button", { type: "button", class: "solid", onclick: () => addLight() }, "Add light");
+  const addBtn = h("button", { type: "button", class: "solid", onclick: () => addLight() }, "+ Add light");
   const addRefl = h("select", { "aria-label": "Reflector to add" });
-  const addReflBtn = h("button", { type: "button", onclick: () => addReflector() }, "Add reflector");
-  els.studio.append(modeRow.row, problems,
-    h("div", { class: "addrow" }, h("label", {}, "Add a light"), addFixture, addRole, addBtn),
-    h("div", { class: "addrow" }, h("label", {}, "Add a reflector"), addRefl, addReflBtn),
+  const addReflBtn = h("button", { type: "button", onclick: () => addReflector() }, "+ Add reflector");
+  els.studio.append(problems,
+    h("div", { class: "addrow" }, addFixture, h("span", { class: "as" }, "as"), addRole, addBtn),
+    h("div", { class: "addrow refl" }, addRefl, addReflBtn),
     invList);
 
   const PLACE = { key: [-45, 30, 1.5], fill: [40, 5, 1.5], back: [140, 35, 1.3], hair: [175, 60, 1.2], accent: [90, 10, 1.5], backdrop: [180, -20, 0.5] };
@@ -125,72 +124,68 @@ export function createPanels(els, history, { onSelect, announce }) {
   }
 
   // ----- Inspector -----
+  // Rows for the selected light, grouped: the basics always show; the rest fold away.
   function lightRows(s, l) {
-    const f = fixture(l.fixture), spec = lightSpec(l, s), out = [];
+    const f = fixture(l.fixture), spec = lightSpec(l, s);
     const room = s.mode === "room";
-    out.push(selectRow({ key: "role", label: "Role", options: Object.entries(ROLES).map(([k, r]) => [k, r.label]),
-      get: () => findLight(history.state)?.role, set: (v) => change((st) => { findLight(st).role = v; }) }));
-    out.push(selectRow({ key: "fixture", label: "Fixture",
+    const out = { basics: [], colour: [], beam: [], about: [] };
+    out.basics.push(selectRow({ key: "fixture", label: "Light",
       options: Object.entries(G().fixtures).filter(([id, x]) => (!x.openOnly || !room) && (!room || id === l.fixture || remaining(s, "fixtures", id) > 0)).map(([id, x]) => [id, x.name]),
       get: () => findLight(history.state)?.fixture,
       set: (v) => change((st) => { const x = findLight(st), nf = fixture(v); x.fixture = v; x.modifier = nf.defaultModifier; x.kelvin = Math.min(nf.kelvin[1], Math.max(nf.kelvin[0], x.kelvin)); if (!nf.rgb) x.color.mode = "white"; }) }));
-    out.push(selectRow({ key: "modifier", label: "Modifier",
+    if (f.modifiers.length > 1) out.basics.push(selectRow({ key: "modifier", label: "Modifier",
+      hint: room ? `Size: ${Math.round(spec.size * 100)} cm. Bigger = softer light.` : null,
       options: f.modifiers.map((m) => [m, modifier(m).name + (room && m !== l.modifier && remaining(s, "modifiers", m) <= 0 ? " (all in use)" : ""), room && m !== l.modifier && remaining(s, "modifiers", m) <= 0]),
       get: () => findLight(history.state)?.modifier, set: (v) => change((st) => { findLight(st).modifier = v; }) }));
-    out.push(checkRow({ key: "on", label: "On", get: () => !!findLight(history.state)?.on, set: (v) => change((st) => { findLight(st).on = v; }) }));
     const noDimmer = room && !f.dimmable;
-    out.push(numberRow({ key: "power", label: "Power", min: 0, max: 1, step: 1, unit: "%", scale: 100, disabled: noDimmer,
-      hint: noDimmer ? "This light has no dimmer. To change how bright it is, move it, use the focus dial (spot or flood), or fold in the barn doors." : null,
+    if (noDimmer) out.basics.push(textRow("Power", "Full: no dimmer. Move it, use spot ↔ flood, or the barn doors."));
+    else out.basics.push(numberRow({ key: "power", label: "Power", min: 0, max: 1, step: 1, unit: "%", scale: 100,
       get: (st) => findLight(st)?.power ?? 0, set: onLight((x, v) => { x.power = v; x.on = true; }, "power-" + l.id) }));
     if (l.role !== "backdrop") {
-      out.push(numberRow({ key: "az", label: "Around", hint: "0° is beside the camera. Negative is camera-left, positive is camera-right, ±180° is behind.",
+      out.basics.push(numberRow({ key: "az", label: "Around", hint: "0° is beside the camera. Negative is camera-left, positive camera-right, ±180° behind. Or drag it on the map.",
         min: LIMITS.azimuthDeg[0], max: LIMITS.azimuthDeg[1], step: 1, unit: "°", get: (st) => findLight(st)?.azimuthDeg ?? 0, set: onLight((x, v) => { x.azimuthDeg = v; }, "az-" + l.id) }));
-      out.push(numberRow({ key: "el", label: "Height", hint: "How far above eye level the light points down from.",
+      out.basics.push(numberRow({ key: "el", label: "Height", hint: "How far above eye level it shines down from. Or drag it in the side view.",
         min: LIMITS.elevationDeg[0], max: LIMITS.elevationDeg[1], step: 1, unit: "°", get: (st) => findLight(st)?.elevationDeg ?? 0, set: onLight((x, v) => { x.elevationDeg = v; }, "el-" + l.id) }));
-      out.push(numberRow({ key: "dist", label: "Distance", hint: "Farther away = dimmer (falloff) and harder shadows.",
+      out.basics.push(numberRow({ key: "dist", label: "Distance", hint: "Farther away = dimmer (falloff) and harder shadows.",
         min: LIMITS.distance[0], max: LIMITS.distance[1], step: 0.05, unit: "m", get: (st) => findLight(st)?.distance ?? 1, set: onLight((x, v) => { x.distance = v; }, "dist-" + l.id) }));
-    } else {
-      out.push(textRow("Position", "Hidden behind the subject, aimed at the backdrop."));
-    }
-    if (room) out.push(textRow("Size", `${Math.round(spec.size * 100)} cm (${modifier(l.modifier).name}). Bigger = softer.`));
-    else out.push(numberRow({ key: "size", label: "Size", hint: "Small = hard light, crisp shadows. Big = soft light, gentle shadows.",
+    } else out.basics.push(textRow("Where", "Hidden behind the subject, aimed at the backdrop."));
+    if (!room) out.basics.push(numberRow({ key: "size", label: "Size", hint: "Small = hard light, crisp shadows. Big = soft light, gentle shadows.",
       min: LIMITS.size[0], max: LIMITS.size[1], step: 1, unit: "cm", scale: 100, get: (st) => { const x = findLight(st); return x ? lightSpec(x, st).size : 0.5; },
       set: onLight((x, v) => { x.sizeOverride = v; }, "size-" + l.id) }));
-    if (f.beamDeg) out.push(numberRow({ key: "flood", label: "Spot ↔ flood", hint: "The focus dial on the back moves the bulb toward or away from the lens. Spot: a narrow, brighter beam. Flood: a wide, dimmer one.",
+    if (f.beamDeg) out.basics.push(numberRow({ key: "flood", label: "Spot ↔ flood", hint: "The focus dial moves the bulb toward or away from the lens. Spot: narrow and bright. Flood: wide and dimmer.",
       min: 0, max: 1, step: 1, unit: "%", scale: 100, get: (st) => findLight(st)?.flood ?? 0.5, set: onLight((x, v) => { x.flood = v; }, "flood-" + l.id) }));
     // Colour
-    if (f.kelvin[0] === f.kelvin[1]) out.push(textRow("Colour", `${f.kelvin[0]} K: warm halogen light, fixed.`));
+    if (f.kelvin[0] === f.kelvin[1]) out.colour.push(textRow("Colour", `${f.kelvin[0]} K: warm halogen, fixed.`));
     else {
-      if (f.rgb) out.push(selectRow({ key: "cmode", label: "Colour mode", options: [["white", "White (warm to cool)"], ["rgb", "Colour (RGB)"]],
+      if (f.rgb) out.colour.push(selectRow({ key: "cmode", label: "Mode", options: [["white", "White (warm to cool)"], ["rgb", "Colour (RGB)"]],
         get: () => findLight(history.state)?.color.mode, set: (v) => change((st) => { findLight(st).color.mode = v; }) }));
-      if (!f.rgb || l.color.mode === "white") out.push(numberRow({ key: "kelvin", label: "Warm ↔ cool", hint: "Low numbers are warm (orange), high numbers are cool (blue). Daylight is about 5600 K.",
+      if (!f.rgb || l.color.mode === "white") out.colour.push(numberRow({ key: "kelvin", label: "Warm ↔ cool", hint: "Low numbers are warm (orange), high numbers cool (blue). Daylight is about 5600 K.",
         min: f.kelvin[0], max: f.kelvin[1], step: 100, unit: "K", get: (st) => findLight(st)?.kelvin ?? 5600, set: onLight((x, v) => { x.kelvin = Math.round(v / 100) * 100; }, "k-" + l.id) }));
       else {
-        out.push(numberRow({ key: "hue", label: "Hue", min: 0, max: 360, step: 1, unit: "°", get: (st) => findLight(st)?.color.hue ?? 0, set: onLight((x, v) => { x.color.hue = v; }, "hue-" + l.id) }));
-        out.push(numberRow({ key: "sat", label: "Saturation", min: 0, max: 1, step: 1, unit: "%", scale: 100, get: (st) => findLight(st)?.color.sat ?? 1, set: onLight((x, v) => { x.color.sat = v; }, "sat-" + l.id) }));
+        out.colour.push(numberRow({ key: "hue", label: "Hue", min: 0, max: 360, step: 1, unit: "°", get: (st) => findLight(st)?.color.hue ?? 0, set: onLight((x, v) => { x.color.hue = v; }, "hue-" + l.id) }));
+        out.colour.push(numberRow({ key: "sat", label: "Saturation", min: 0, max: 1, step: 1, unit: "%", scale: 100, get: (st) => findLight(st)?.color.sat ?? 1, set: onLight((x, v) => { x.color.sat = v; }, "sat-" + l.id) }));
       }
     }
-    if (modifier(l.modifier).gels) out.push(selectRow({ key: "gel", label: "Gel", options: Object.entries(G().gels).map(([k, g]) => [k, g.name]),
+    if (modifier(l.modifier).gels) out.colour.push(selectRow({ key: "gel", label: "Gel", options: Object.entries(G().gels).map(([k, g]) => [k, g.name]),
       get: () => findLight(history.state)?.gel, set: (v) => change((st) => { findLight(st).gel = v; }) }));
-    if (modifier(l.modifier).gobo) out.push(selectRow({ key: "gobo", label: "Gobo", hint: "A metal pattern that projects shapes with the light.",
+    // Shaping the beam
+    if (modifier(l.modifier).gobo) out.beam.push(selectRow({ key: "gobo", label: "Gobo", hint: "A metal pattern that projects shapes with the light.",
       options: Object.entries(G().gobos).map(([k, g]) => [k, g.name]), get: () => findLight(history.state)?.gobo, set: (v) => change((st) => { findLight(st).gobo = v; }) }));
     if (f.barnDoors && l.role !== "backdrop") {
-      out.push(textRow("Barn doors", "Fold a door in to cut light off one side of the beam."));
-      for (const side of Object.keys(SIDES)) out.push(numberRow({ key: "bd-" + side, label: SIDES[side], min: 0, max: LIMITS.cut[1], step: 1, unit: "%", scale: 100,
+      for (const side of Object.keys(SIDES)) out.beam.push(numberRow({ key: "bd-" + side, label: "Door: " + SIDES[side].toLowerCase(), hint: "Fold a barn door in to cut light off that side of the beam.",
+        min: 0, max: LIMITS.cut[1], step: 1, unit: "%", scale: 100,
         get: (st) => findLight(st)?.shutters[side] ?? 0, set: onLight((x, v) => { x.shutters[side] = v; }, "bd-" + side + l.id) }));
     }
     const flagFree = !room || l.flag || remaining(s, "reflectors", "flag-black-white") > 0;
     if (l.role !== "backdrop" && flagFree) {
-      out.push(selectRow({ key: "flag", label: "Black flag", hint: "Blocks light from one side, for example to keep it off the backdrop or the lens.",
+      out.beam.push(selectRow({ key: "flag", label: "Black flag", hint: "Blocks light from one side, for example to keep it off the backdrop or the lens.",
         options: [["none", "No flag"], ...Object.entries(SIDES).map(([k, v]) => [k, "On the " + v.toLowerCase()])],
         get: () => findLight(history.state)?.flag?.side || "none",
         set: (v) => change((st) => { const x = findLight(st); x.flag = v === "none" ? null : { side: v, amount: x.flag?.amount ?? 0.5 }; }) }));
-      if (l.flag) out.push(numberRow({ key: "flagamt", label: "Flag amount", min: 0, max: LIMITS.cut[1], step: 1, unit: "%", scale: 100,
+      if (l.flag) out.beam.push(numberRow({ key: "flagamt", label: "Flag amount", min: 0, max: LIMITS.cut[1], step: 1, unit: "%", scale: 100,
         get: (st) => findLight(st)?.flag?.amount ?? 0, set: onLight((x, v) => { if (x.flag) x.flag.amount = v; }, "flag-" + l.id) }));
     }
-    out.push({ row: h("div", { class: "row actions" },
-      h("button", { type: "button", onclick: () => remove(l.id) }, "Remove this light")), update() {} });
-    out.push({ row: h("p", { class: "hint source" }, (f.estimate ? "Some numbers for this light are estimates. " : "") + f.source), update() {} });
+    out.about.push({ row: h("p", { class: "hint source" }, (f.estimate ? "Some numbers for this light are estimates. " : "") + f.source), update() {} });
     return out;
   }
   function reflectorRows(s, r) {
@@ -206,7 +201,6 @@ export function createPanels(els, history, { onSelect, announce }) {
       get: (st) => findRefl(st)?.elevationDeg ?? 0, set: onRefl((x, v) => { x.elevationDeg = v; }, "rel-" + r.id) }));
     out.push(numberRow({ key: "rdist", label: "Distance", hint: "Closer = brighter bounce.", min: LIMITS.distance[0], max: LIMITS.distance[1], step: 0.05, unit: "m",
       get: (st) => findRefl(st)?.distance ?? 1, set: onRefl((x, v) => { x.distance = v; }, "rdist-" + r.id) }));
-    out.push({ row: h("div", { class: "row actions" }, h("button", { type: "button", onclick: () => remove(r.id) }, "Remove this reflector")), update() {} });
     return out;
   }
   function remove(id) {
@@ -230,18 +224,44 @@ export function createPanels(els, history, { onSelect, announce }) {
     els.inspector.innerHTML = "";
     if (l) {
       const role = ROLES[l.role];
-      els.inspector.append(h("h2", { class: "inspector-title" }, h("span", { class: `badge ${l.role}`, "aria-hidden": "true" }, role.letter), " " + role.label),
+      const roleSel = selectRow({ key: "role", label: "Job", options: Object.entries(ROLES).map(([k, r]) => [k, r.label]),
+        get: () => findLight(history.state)?.role, set: (v) => change((st) => { findLight(st).role = v; }) });
+      const onSwitch = h("button", { type: "button", class: "switch", "data-key": "on", role: "switch", "aria-label": "Light on",
+        onclick: () => change((st) => { const x = findLight(st); x.on = !x.on; }) });
+      els.inspector.append(
+        h("div", { class: "inspector-head" },
+          h("span", { class: `badge ${l.role}`, "aria-hidden": "true" }, role.letter),
+          h("h2", { class: "inspector-title" }, role.label),
+          onSwitch,
+          h("button", { type: "button", class: "icon", "data-key": "remove", "aria-label": "Remove this light", title: "Remove this light", onclick: () => remove(l.id) }, "✕")),
         h("p", { class: "define" }, role.define));
-      rows = lightRows(s, l);
+      const groups = lightRows(s, l);
+      rows = [roleSel, ...groups.basics, ...groups.colour, ...groups.beam, ...groups.about,
+        { update(st) { const x = findLight(st); if (!x) return; onSwitch.setAttribute("aria-checked", x.on ? "true" : "false"); onSwitch.textContent = x.on ? "On" : "Off"; } }];
+      els.inspector.append(roleSel.row, ...groups.basics.map((x) => x.row));
+      const section = (key, title, list) => {
+        if (!list.length) return;
+        const d = h("details", { class: "section", "data-sec": key }, h("summary", {}, title), ...list.map((x) => x.row));
+        if (openSections.has(key)) d.open = true;
+        d.addEventListener("toggle", () => { if (d.open) openSections.add(key); else openSections.delete(key); });
+        els.inspector.append(d);
+      };
+      section("colour", "Colour", groups.colour);
+      section("beam", "Shape the beam", groups.beam);
+      section("about", "About this light", groups.about);
     } else if (r) {
-      els.inspector.append(h("h2", { class: "inspector-title" }, h("span", { class: "badge reflector", "aria-hidden": "true" }, "R"), " Reflector"),
+      els.inspector.append(
+        h("div", { class: "inspector-head" },
+          h("span", { class: "badge reflector", "aria-hidden": "true" }, "R"),
+          h("h2", { class: "inspector-title" }, "Reflector"),
+          h("button", { type: "button", class: "icon", "data-key": "remove", "aria-label": "Remove this reflector", title: "Remove this reflector", onclick: () => remove(r.id) }, "✕")),
         h("p", { class: "define" }, "A card that bounces light back onto the subject, usually to lift the shadow side."));
       rows = reflectorRows(s, r);
+      els.inspector.append(...rows.map((x) => x.row));
     } else {
-      els.inspector.append(h("h2", {}, "No light selected"), h("p", { class: "define" }, s.lights.length ? "Pick a light on the map." : "The studio is dark. Add a light in the Studio panel, or pick a preset."));
+      els.inspector.append(h("h2", {}, "No light selected"), h("p", { class: "define" }, s.lights.length ? "Pick a light above the map, or on the map." : "The studio is dark. Add a light under the map, or pick a preset."));
       rows = [];
     }
-    els.inspector.append(...rows.map((x) => x.row));
     restoreFocus(focusKey);
   }
 
@@ -275,15 +295,14 @@ export function createPanels(els, history, { onSelect, announce }) {
     update(s) {
       if (selected && !findLight(s) && !findRefl(s)) selected = null;
       if (!selected && s.lights.length) selected = s.lights[0].id;
-      modeRow.update(s);
       const probs = inventoryProblems(s);
       problems.innerHTML = "";
       probs.forEach((p) => problems.append(h("li", {}, p)));
       problems.hidden = !probs.length;
       if (s.mode === "room") {
         const inv = inventory();
-        invList.textContent = "The room has: " + Object.entries(inv.fixtures).filter(([, n]) => n > 0).map(([id, n]) => `${n} × ${fixture(id).short}`).join(", ") + ".";
-      } else invList.textContent = "Open studio: any gear, any amount, and any light size. Numbers are still real.";
+        invList.textContent = "In the room: " + Object.entries(inv.fixtures).filter(([, n]) => n > 0).map(([id, n]) => `${n} × ${fixture(id).short}`).join(", ") + ".";
+      } else invList.textContent = "Open studio: any gear, any amount, any light size.";
       fillAddMenus(s);
       buildInspector(s);
       rows.forEach((r) => r.update(s));

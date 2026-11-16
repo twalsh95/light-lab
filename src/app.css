@@ -133,4 +133,98 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--key); }
 .map .light.reflector.gold .card { fill: var(--gold); }
 .map .light.reflector .letter { fill: var(--text); }
 
+/* ---------- Phase 4 UI pass ---------- */
+.top { gap: 8px 14px; }
+.toolbar { align-items: center; gap: 8px 12px; flex: 1; }
+.toolbar > .menu { margin-left: auto; }
+button.seg { min-height: 36px; padding: 6px 12px; border-color: var(--line); }
+button.seg + button.seg { margin-left: -7.5px; }
+button.seg[aria-checked="true"] { background: var(--key); color: var(--ink); border-color: var(--key); font-weight: 700; }
+button.preset { border-color: var(--line); min-height: 36px; padding: 6px 10px; }
+#presets::before { content: "Presets"; color: var(--muted); font-size: 13px; align-self: center; margin-right: 2px; }
+.group { align-items: center; }
+#undo, #redo { min-height: 36px; padding: 6px 10px; }
+
+/* Save menu */
+.menu { position: relative; }
+.menu > summary { list-style: none; cursor: pointer; padding: 7px 14px; border: 1.5px solid var(--text); background: var(--text); color: var(--ink); font-weight: 600; min-height: 36px; display: flex; align-items: center; }
+.menu > summary::-webkit-details-marker { display: none; }
+.menu > summary::after { content: "▾"; margin-left: 8px; }
+.menu-items { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; background: var(--panel-2); border: 1.5px solid var(--line); display: grid; min-width: 15rem; box-shadow: 0 8px 24px rgba(0,0,0,0.45); }
+.menu-items button { border: 0; border-bottom: 1px solid var(--line); text-align: left; padding: 10px 14px; }
+.menu-items button:last-child { border-bottom: 0; color: var(--muted); }
+.menu-items button:hover { background: var(--panel); }
+
+/* Cards */
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.card-head h2 { margin: 0; }
+.quality { margin: 0; gap: 6px; font-size: 13px; color: var(--muted); }
+.quality select { min-height: 32px; padding: 3px 6px; }
+.note { font-size: 12px; }
+
+/* Light chips */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; min-height: 34px; }
+.chip-wrap { display: inline-flex; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px 3px 4px; min-height: 34px; border: 1.5px solid var(--line); }
+.chip .badge { width: 22px; height: 22px; font-size: 11px; }
+.chip[aria-pressed="true"] { border-color: var(--text); background: var(--panel-2); }
+.chip.off .chip-name { color: var(--muted); text-decoration: line-through; }
+.chip-name { font-size: 13px; }
+.chip-switch { min-height: 34px; padding: 3px 7px; border-left: 0; font-size: 12px; color: var(--muted); }
+.chip-switch[aria-checked="true"] { color: var(--ink); background: var(--accent); border-color: var(--accent); }
+
+/* Side view */
+.sideview { margin-top: 8px; }
+.side-svg { width: 100%; height: auto; display: block; background: var(--ink); border: 1.5px solid var(--line); touch-action: none; user-select: none; }
+.side-svg .eye { stroke: #2b2f37; stroke-width: 0.012; stroke-dasharray: 0.05 0.05; }
+.side-svg .floor { stroke: #2b2f37; stroke-width: 0.02; }
+.side-svg .label { fill: var(--muted); font-size: 0.13px; }
+.side-svg .subject { fill: #cfc9c2; }
+.side-svg .subject.head { fill: #e7e1da; }
+.side-svg .ray { stroke-width: 0.015; stroke-dasharray: 0.06 0.05; }
+.side-svg .ray.key { stroke: var(--key); } .side-svg .ray.fill { stroke: var(--fill); } .side-svg .ray.back { stroke: var(--back); }
+.side-svg .ray.hair { stroke: var(--hair); } .side-svg .ray.accent { stroke: var(--accent); } .side-svg .ray.reflector { stroke: var(--gold); }
+.side-svg .light { cursor: ns-resize; }
+.side-svg .light .shape { stroke: var(--ink); stroke-width: 0.03; }
+.side-svg .light.key .shape { fill: var(--key); } .side-svg .light.fill .shape { fill: var(--fill); } .side-svg .light.back .shape { fill: var(--back); }
+.side-svg .light.hair .shape { fill: var(--hair); } .side-svg .light.accent .shape { fill: var(--accent); } .side-svg .light.reflector .shape { fill: var(--gold); }
+.side-svg .light.off .shape { fill: var(--ink) !important; stroke: var(--muted); }
+.side-svg .light .letter { font-size: 0.17px; font-weight: 700; fill: var(--ink); pointer-events: none; }
+.side-svg .light:focus { outline: none; }
+.side-svg .light:focus-visible .shape { stroke: var(--focus); stroke-width: 0.07; }
+.side-caption { margin: 4px 0 0; font-size: 12px; }
+
+/* Adding gear */
+.studio-add { margin-top: 10px; }
+.addrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+.addrow select { flex: 1 1 9rem; min-width: 0; }
+.addrow .as { color: var(--muted); font-size: 13px; }
+.inventory { font-size: 12px; }
+details.keys { margin-top: 6px; }
+details.keys summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+
+/* Inspector */
+.inspector-head { display: flex; align-items: center; gap: 8px; }
+.inspector-head .inspector-title { flex: 1; font-size: 16px; margin: 0; }
+button.switch { min-height: 32px; padding: 4px 12px; font-weight: 700; }
+button.switch[aria-checked="true"] { background: var(--accent); color: var(--ink); border-color: var(--accent); }
+button.icon { min-height: 32px; min-width: 36px; padding: 4px 8px; color: var(--muted); }
+.define { font-size: 13px; }
+details.section { border-top: 1.5px solid var(--line); margin-top: 10px; padding-top: 6px; }
+details.section > summary { cursor: pointer; font-weight: 600; padding: 4px 0; list-style: none; display: flex; align-items: center; gap: 8px; }
+details.section > summary::-webkit-details-marker { display: none; }
+details.section > summary::before { content: "▸"; color: var(--muted); }
+details.section[open] > summary::before { content: "▾"; }
+.scene details.section:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+
+/* Hints show as a tip under the row while it's hovered or focused (and are read by screen
+   readers through aria-describedby), instead of always taking up space. */
+.row { position: relative; }
+.row .hint { display: none; position: absolute; left: 0; right: 0; top: calc(100% + 2px); z-index: 10;
+  background: var(--panel-2); border: 1px solid var(--line); padding: 6px 8px; color: var(--text); box-shadow: 0 6px 16px rgba(0,0,0,0.4); }
+.row:hover .hint, .row:focus-within .hint { display: block; }
+.row label { cursor: help; }
+.row label, .rowlabel { text-decoration: underline dotted var(--line); text-underline-offset: 3px; }
+.row.check label, .row.text .rowlabel { text-decoration: none; cursor: default; }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

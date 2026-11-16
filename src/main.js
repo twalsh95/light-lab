@@ -27,6 +27,8 @@ const { createQuality } = await import("./render/quality.js");
 const { createMap } = await import("./ui/map.js");
 const { createPanels } = await import("./ui/panels.js");
 const { composeSnapshot, snapshotPdf } = await import("./ui/snapshot.js");
+const { createChips } = await import("./ui/chips.js");
+const { createSideView } = await import("./ui/sideview.js");
 
 // ---------- State ----------
 let initial;
@@ -55,6 +57,7 @@ try {
 const quality = createQuality(renderer, { onChange: (q) => {
   const a = q.autoLevels;
   $("qualityNote").textContent = q.choice === "auto" ? `Auto: ${a.interactive} while moving, ${a.still} when still.` : "";
+  $("quality").title = $("qualityNote").textContent;
 } });
 
 const cssSize = () => Math.max(160, Math.round(view.clientWidth));
@@ -97,7 +100,7 @@ const map = createMap($("map"), {
     const l = s.lights.find((x) => x.id === id);
     l.power = Math.round(Math.min(1, Math.max(0, l.power + delta)) * 100) / 100; l.on = true;
   }, group),
-  onToggle: (id) => history.change((s) => { const l = s.lights.find((x) => x.id === id); l.on = !l.on; }),
+  onToggle: toggleLight,
   onSelect: select,
   onEndGroup: () => history.endGroup(),
   onRemove: (id) => {
@@ -106,10 +109,35 @@ const map = createMap($("map"), {
   },
 });
 
+function toggleLight(id) { history.change((s) => { const l = s.lights.find((x) => x.id === id); if (l) l.on = !l.on; }); }
+const chips = createChips($("chips"), { onSelect: (id) => { select(id); map.focus(id); }, onToggle: toggleLight });
+const side = createSideView($("sideview"), {
+  onChange: (id, { elevationDeg, distance }, group) => history.change((s) => { const o = findAny(s, id); o.elevationDeg = elevationDeg; o.distance = distance; }, group),
+  onEndGroup: () => history.endGroup(),
+});
+
+// Our room / Open studio, in the header.
+for (const b of document.querySelectorAll("#modeToggle [data-mode]")) {
+  b.addEventListener("click", () => {
+    const mode = b.dataset.mode;
+    if (history.state.mode === mode) return;
+    history.change((s) => { s.mode = mode; if (mode === "room") s.lights.forEach((l) => { l.sizeOverride = null; }); });
+    announce(mode === "room" ? "Our room: only the gear we really have." : "Open studio: any gear, any amount, any light size.");
+  });
+}
+// The Save menu closes when you pick something, click elsewhere, or press Escape.
+const saveMenu = $("saveMenu");
+saveMenu.addEventListener("click", (e) => { if (e.target.closest(".menu-items button")) saveMenu.open = false; });
+document.addEventListener("click", (e) => { if (saveMenu.open && !saveMenu.contains(e.target)) saveMenu.open = false; });
+saveMenu.addEventListener("keydown", (e) => { if (e.key === "Escape" && saveMenu.open) { saveMenu.open = false; saveMenu.querySelector("summary").focus(); } });
+
 function refresh() {
   const s = history.state;
   panels.update(s);
   map.update(s, panels.selected);
+  chips.update(s, panels.selected);
+  side.update(s, panels.selected);
+  for (const b of document.querySelectorAll("#modeToggle [data-mode]")) b.setAttribute("aria-checked", b.dataset.mode === s.mode ? "true" : "false");
   $("undo").disabled = !history.canUndo();
   $("redo").disabled = !history.canRedo();
 }

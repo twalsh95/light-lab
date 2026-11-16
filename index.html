@@ -10,20 +10,27 @@
 <body>
 <header class="top">
   <h1><span class="brand">Light Lab</span></h1>
-  <div class="toolbar" role="toolbar" aria-label="Setup">
-    <div id="presets" class="group" aria-label="Presets"></div>
-    <div class="group">
-      <button id="undo" type="button" title="Undo (Ctrl+Z)">Undo</button>
-      <button id="redo" type="button" title="Redo (Ctrl+Y)">Redo</button>
-      <button id="reset" type="button">Reset</button>
+  <div class="toolbar" role="toolbar" aria-label="Studio">
+    <div class="group" role="radiogroup" aria-label="Gear" id="modeToggle">
+      <button type="button" role="radio" data-mode="room" class="seg">Our room</button>
+      <button type="button" role="radio" data-mode="open" class="seg">Open studio</button>
     </div>
+    <div class="group" id="presets" role="group" aria-label="Presets"></div>
     <div class="group">
-      <button id="savePng" type="button" class="solid">Save PNG</button>
-      <button id="savePdf" type="button">Save PDF</button>
-      <button id="saveSetup" type="button">Save setup</button>
-      <button id="openSetup" type="button">Open setup</button>
-      <input id="openFile" type="file" accept=".json,application/json" hidden>
+      <button id="undo" type="button" title="Undo (Ctrl+Z)" aria-label="Undo">↶ Undo</button>
+      <button id="redo" type="button" title="Redo (Ctrl+Y)" aria-label="Redo">↷ Redo</button>
     </div>
+    <details class="menu" id="saveMenu">
+      <summary class="solid">Save / open</summary>
+      <div class="menu-items" role="menu">
+        <button id="savePng" type="button" role="menuitem">Save picture (PNG)</button>
+        <button id="savePdf" type="button" role="menuitem">Save one-page PDF</button>
+        <button id="saveSetup" type="button" role="menuitem">Save setup file</button>
+        <button id="openSetup" type="button" role="menuitem">Open a setup file…</button>
+        <button id="reset" type="button" role="menuitem">Start over (three-point)</button>
+      </div>
+    </details>
+    <input id="openFile" type="file" accept=".json,application/json" hidden>
   </div>
 </header>
 
@@ -31,39 +38,48 @@
 <div id="notice" class="notice" role="dialog" aria-labelledby="noticeTitle" hidden>
   <h2 id="noticeTitle">What Light Lab saves</h2>
   <p>Your current setup is kept in this browser only, so it's still here next time on this computer. Nothing is sent anywhere, and there's no sign-in.</p>
-  <p>To keep a copy, use <strong>Save PNG</strong> or <strong>Save PDF</strong> for the picture, diagram and settings, or <strong>Save setup</strong> for a file you can open again later.</p>
+  <p>To keep a copy, open <strong>Save / open</strong>: save the picture, a one-page PDF, or a setup file you can open again later.</p>
   <button id="noticeOk" type="button" class="solid">Got it</button>
 </div>
 
 <main class="studio">
   <section class="card view-card" aria-labelledby="viewTitle">
-    <h2 id="viewTitle">Camera view</h2>
-    <div id="view" class="view"><canvas id="portrait" class="portrait" role="img"></canvas></div>
-    <div id="qualityRow" class="quality">
-      <label for="quality">Quality</label>
-      <select id="quality">
-        <option value="auto" selected>Auto</option>
-        <option value="low">Low (fastest)</option>
-        <option value="medium">Medium</option>
-        <option value="high">High (sharpest)</option>
-      </select>
-      <span id="qualityNote" class="hint"></span>
+    <div class="card-head">
+      <h2 id="viewTitle">Camera view</h2>
+      <span id="qualityRow" class="quality">
+        <label for="quality">Quality</label>
+        <select id="quality" aria-describedby="qualityNote">
+          <option value="auto" selected>Auto</option>
+          <option value="low">Low (fastest)</option>
+          <option value="medium">Medium</option>
+          <option value="high">High (sharpest)</option>
+        </select>
+        <span id="qualityNote" class="visually-hidden"></span>
+      </span>
     </div>
-    <p class="note">This is a simplified studio. Real skin, hair, and lights behave in more complicated ways. Use this to build your instincts, then check them at the stations.</p>
+    <div id="view" class="view"><canvas id="portrait" class="portrait" role="img"></canvas></div>
+    <p class="note">A simplified studio: real skin, hair and lights are more complicated. Build your instincts here, then check them at the stations.</p>
   </section>
 
   <section class="card map-card" aria-labelledby="mapTitle">
-    <h2 id="mapTitle">Studio from above</h2>
+    <div class="card-head"><h2 id="mapTitle">Studio from above</h2></div>
+    <div id="chips" class="chips" role="toolbar" aria-label="Lights"></div>
     <div id="map"></div>
-    <p class="hint">Drag a light, or Tab to it and use the arrow keys. <kbd>+</kbd> <kbd>−</kbd> change power. <kbd>Space</kbd> turns it on or off. <kbd>Delete</kbd> removes it.</p>
+    <div id="sideview" class="sideview"></div>
+    <div id="studio" class="studio-add"></div>
+    <details class="keys">
+      <summary>Keyboard</summary>
+      <p class="hint">Tab to a light on the map, then: arrow keys move it (Shift for small steps), <kbd>+</kbd> <kbd>−</kbd> power, <kbd>Space</kbd> on or off, <kbd>Delete</kbd> remove. In the side view, up and down arrows change the height. <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes.</p>
+    </details>
   </section>
 
   <div class="side">
     <section class="card" id="inspector" aria-label="Selected light"></section>
-    <section class="card" aria-labelledby="studioTitle"><h2 id="studioTitle">Studio</h2><div id="studio"></div></section>
-    <section class="card" aria-labelledby="subjTitle"><h2 id="subjTitle">Subject</h2><div id="subject"></div></section>
-    <section class="card" aria-labelledby="bdTitle"><h2 id="bdTitle">Backdrop</h2><div id="backdrop"></div></section>
-    <section class="card" aria-labelledby="camTitle"><h2 id="camTitle">Camera</h2><div id="camera"></div></section>
+    <section class="card scene" aria-label="Scene">
+      <details class="section" open><summary>Backdrop</summary><div id="backdrop"></div></details>
+      <details class="section"><summary>Subject</summary><div id="subject"></div></details>
+      <details class="section"><summary>Camera</summary><div id="camera"></div></details>
+    </section>
   </div>
 </main>
 <p id="status" class="visually-hidden" aria-live="polite"></p>

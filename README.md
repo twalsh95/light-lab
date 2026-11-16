@@ -14,23 +14,22 @@ Live at **walshclassroom.com/light-lab/**. No sign-in, and nothing is sent anywh
 | 1 | Rendering spike | Done: renderer B chosen (`docs/PHASE1_SPIKE_RESULTS.md`, test page in `spike/`) |
 | 2 | Core sandbox | Approved Nov 16 2026 |
 | 3 | Gear and modifiers | Approved Nov 16 2026 (`docs/PHASE3_GEAR_NOTES.md`: remaining estimates, gobo set still to match) |
-| 4 | UI pass (first), then the learning layer | Not started |
+| 4 | UI pass (first), then the learning layer | UI pass built, waiting for Tom's review (`docs/ui-pass/`); learning layer not started |
 | 5+ | Accounts, class mode, … | Not started |
 
 ## Using it
 
-- **Room mode** uses only the real gear in the room (`data/gear.json`). **Open studio** has unlimited gear and any light size.
-- **Presets:** Three-point, High-key, Low-key, Blank studio, all built from the real gear. Undo brings your own setup back.
-- **Studio panel:** add a light (fixture + role: key, fill, back, hair, accent, backdrop) or a reflector (white, silver, gold).
-- **Map ("Studio from above"):** drag a light around the subject. With the keyboard: Tab to a light, then arrow keys move it (Shift for small steps), `+` and `-` change power, Space turns it on or off.
-- **Selected light:** role, fixture, modifier, power, around, height, distance; size (Open studio); spot/flood (Fresnels); warm/cool or RGB colour; gel (snoot); gobo pattern; barn doors (Fresnels); black flag. Each number has a slider and a number box.
-- **Subject:** skin tone (clay, light to deep) and clothing (same as skin, white shirt, dark jacket).
-- **Backdrop:** white, black or chroma green (any grey in Open studio), and its distance. Light it with a light whose role is Backdrop light.
-- **Camera:** auto exposure (a light meter at the face), exposure compensation, white balance (daylight, tungsten, or auto).
-- **Undo / Redo:** buttons, or Ctrl+Z / Ctrl+Y (Cmd on a Mac). A whole drag is one step.
-- **Save PNG** / **Save PDF** save a one-page snapshot: portrait, lighting diagram and settings. **Save setup** / **Open setup** save and open the lighting settings as a small file. Phase 2 setup files still open.
+- **Header:** *Our room* (only the real gear in `data/gear.json`) or *Open studio* (any gear, any amount, any light size); presets (Three-point, High-key, Low-key, Blank studio); Undo and Redo; and the **Save / open** menu.
+- **Save / open:** save the picture (PNG) or a one-page PDF (portrait, lighting diagram, settings), save a setup file, open one again (Phase 2 files still open), or start over.
+- **Light chips** above the map: click one to pick that light; its switch turns it on or off.
+- **Studio from above (map):** drag a light or reflector around the subject. Keyboard: Tab to it, arrow keys move it (Shift for small steps), `+` and `-` power, Space on or off, Delete removes it.
+- **Side view** under the map: drag the selected light up or down to change its height (arrow keys work too).
+- **Add a light** (pick the light and its job: key, fill, back, hair, accent, backdrop) or **a reflector** (white, silver, gold) under the map.
+- **Selected light:** job, on/off and remove at the top; then light, modifier, power, around, height, distance (size in Open studio; spot ↔ flood on the Fresnels). **Colour** (warm ↔ cool, RGB, gel) and **Shape the beam** (gobo, barn doors, black flag) fold open when needed. Hover over or focus a setting to see what it does.
+- **Backdrop, Subject, Camera** (folding sections): backdrop type and distance; skin tone and clothing; auto exposure, exposure compensation, white balance.
+- **Undo / Redo:** a whole drag is one step. Ctrl+Z / Ctrl+Y (Cmd on a Mac).
 - The current setup is kept in the browser, so it's still there next time on the same computer.
-- **Quality:** Auto measures the device when the page opens, steps down if dragging gets slow, and draws one sharper frame when you stop. Low, Medium and High can be chosen by hand.
+- **Quality:** Auto measures the device when the page opens, steps down if dragging gets slow, and draws one sharper frame when you stop.
 - **Simple view:** devices without WebGL 2 get a 2D view automatically. `?view=simple` opens it on purpose.
 
 ## Files
@@ -44,7 +43,8 @@ src/scene/            Scene model: schema.js (presets, cleaning input, files), h
                       gear.js (gear list, Room-mode inventory), lightmath.js (positions, falloff,
                       exposure, colour, reflectors, barn doors), head.js (the clay model)
 src/render/           shader.js (3D view), fallback2d.js (simple view), quality.js (auto quality)
-src/ui/               map.js (top-down map), panels.js (settings panels), snapshot.js (PNG and PDF)
+src/ui/               map.js (top-down map), sideview.js (height), chips.js (light chips),
+                      panels.js (settings panels), snapshot.js (PNG and PDF)
 tests/index.html      Browser tests and a preset-vs-reference sheet (open from a local server)
 tests/app.html        The app with a timer-driven loop, for testing in a background tab
 spike/                Phase 1 rendering test page (kept for reference)
