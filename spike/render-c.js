@@ -71,6 +71,7 @@ export function create(canvas, { quality = "medium", response = "linear" } = {})
     },
     render() { pt.renderSample(); },
     get samples() { return pt.samples; },
+    get compiling() { return pt.isCompiling || pt.samples < 1; },
     get debug() { return { pt, compiling: pt.isCompiling }; },
     restart() { pt.reset(); },
     gpu: () => renderer.getContext(),

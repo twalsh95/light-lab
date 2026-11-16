@@ -194,20 +194,40 @@ async function orbitRun(seconds) {
     medianFps: +(1000 / median(times)).toFixed(1),
     worstFps: +(1000 / pct(times, 0.95)).toFixed(1),
     frames: times.length,
+    // Stalls: frames that froze the page for more than 0.1 s (a student would see a hitch).
+    stalls: times.filter((t) => t > 100).length,
+    longestMs: +Math.max(...times).toFixed(0),
   };
 }
-async function developRun(capS = 45) {
-  current.r.restart();
-  const t0 = performance.now(), marks = {};
+// C has two separate costs: a one-time shader build (the page can freeze while it happens),
+// then the time for the image to clear up. They are timed separately.
+async function developRun(capS = 45, compileCapS = 120) {
+  const t0 = performance.now();
+  let longest = 0;
   await new Promise((resolve) => {
     onFrame = (dt, now) => {
-      const s = current.r.samples, t = (now - t0) / 1000;
+      longest = Math.max(longest, dt);
+      if (!current.r.compiling || (now - t0) / 1000 > compileCapS) { onFrame = null; resolve(); }
+    };
+  });
+  const compileSeconds = +((performance.now() - t0) / 1000).toFixed(1);
+  current.r.restart();
+  const t1 = performance.now(), marks = {};
+  await new Promise((resolve) => {
+    onFrame = (dt, now) => {
+      if (marks.started) longest = Math.max(longest, dt);
+      marks.started = true;
+      const s = current.r.samples, t = (now - t1) / 1000;
       if (s >= 16 && !marks.s16) marks.s16 = +t.toFixed(1);
       if (s >= 64 && !marks.s64) marks.s64 = +t.toFixed(1);
       if (marks.s64 || t > capS) { marks.samplesReached = Math.floor(s); marks.seconds = +t.toFixed(1); onFrame = null; resolve(); }
     };
   });
-  return { secondsTo16: marks.s16 ?? null, secondsTo64: marks.s64 ?? null, samplesReached: marks.samplesReached, seconds: marks.seconds };
+  return {
+    compileSeconds, longestFreezeMs: +longest.toFixed(0),
+    secondsTo16: marks.s16 ?? null, secondsTo64: marks.s64 ?? null,
+    samplesReached: marks.samplesReached, seconds: marks.seconds,
+  };
 }
 
 async function runBenchmark(which) {
@@ -250,15 +270,15 @@ function setBusy(b) {
 let lastReport = null;
 function renderResults(runs, done) {
   lastReport = {
-    tool: "Light Lab rendering spike", version: 1, date: new Date().toISOString(),
+    tool: "Light Lab rendering spike", version: 2, date: new Date().toISOString(),
     viewCssPx: VIEW, device: DEVICE, deviceNote: $("deviceNote").value.trim(), runs,
   };
   const rows = runs.map((r) => r.error
     ? `<tr><td>${r.candidate.toUpperCase()}</td><td>${r.quality}</td><td>${PRESETS[r.preset].label}</td><td colspan="4">${r.error}</td></tr>`
     : r.candidate === "c"
-      ? `<tr><td>C</td><td>${r.quality}</td><td>${PRESETS[r.preset].label}</td><td colspan="4">16 samples: ${r.secondsTo16 ?? "–"} s · 64 samples: ${r.secondsTo64 ?? "not reached"} s</td></tr>`
-      : `<tr><td>${r.candidate.toUpperCase()}</td><td>${r.quality}</td><td>${PRESETS[r.preset].label}</td><td>${r.medianFps}</td><td>${r.worstFps}</td><td>${r.medianMs}</td><td>${r.gpuMedianMs ?? "n/a"}</td></tr>`).join("");
-  ui.results.innerHTML = `<table><thead><tr><th>Candidate</th><th>Quality</th><th>Look</th><th>Typical fps</th><th>Worst fps (5%)</th><th>ms per frame</th><th>GPU ms</th></tr></thead><tbody>${rows}</tbody></table>` +
+      ? `<tr><td>C</td><td>${r.quality}</td><td>${PRESETS[r.preset].label}</td><td colspan="5">setup ${r.compileSeconds} s (longest freeze ${r.longestFreezeMs} ms) · 16 samples: ${r.secondsTo16 ?? "–"} s · 64 samples: ${r.secondsTo64 ?? "not reached"} s</td></tr>`
+      : `<tr><td>${r.candidate.toUpperCase()}</td><td>${r.quality}</td><td>${PRESETS[r.preset].label}</td><td>${r.medianFps}</td><td>${r.worstFps}</td><td>${r.medianMs}</td><td>${r.gpuMedianMs ?? "n/a"}</td><td>${r.stalls} (${r.longestMs} ms)</td></tr>`).join("");
+  ui.results.innerHTML = `<table><thead><tr><th>Candidate</th><th>Quality</th><th>Look</th><th>Typical fps</th><th>Worst fps (5%)</th><th>ms per frame</th><th>GPU ms</th><th>Hitches (longest)</th></tr></thead><tbody>${rows}</tbody></table>` +
     (done ? `<p class="hint">Done. Copy or download the results and send them to me with the device's name.</p>` : "");
   ui.resultsText.value = JSON.stringify(lastReport, null, 2);
 }
