@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Light Lab rendering spike</title>
+<script type="importmap">
+{
+  "imports": {
+    "three": "../vendor/three/build/three.module.js",
+    "three/addons/": "../vendor/three/examples/jsm/",
+    "three/examples/jsm/": "../vendor/three/examples/jsm/",
+    "three-mesh-bvh": "../vendor/three-mesh-bvh/build/index.module.js",
+    "three-gpu-pathtracer": "../vendor/three-gpu-pathtracer/build/index.module.js"
+  }
+}
+</script>
+<style>
+  :root { --ink: #101114; --panel: #1a1c21; --line: #3a3d45; --text: #f2f2f4; --muted: #b9bcc5; --amber: #f2a93b; --blue: #5aa9e6; --red: #e5564f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ink); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 14px 16px; border-bottom: 1.5px solid var(--line); }
+  h1 { margin: 0; font-size: 20px; }
+  h1 span { color: var(--amber); }
+  header p { margin: 4px 0 0; color: var(--muted); max-width: 70ch; }
+  main { display: grid; grid-template-columns: auto 1fr; gap: 16px; padding: 16px; align-items: start; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } }
+  .views { display: flex; gap: 12px; flex-wrap: wrap; }
+  #stage canvas { display: block; background: #000; border: 1.5px solid var(--line); max-width: 100%; height: auto !important; aspect-ratio: 1; }
+  figure { margin: 0; }
+  #ref { width: 280px; aspect-ratio: 1; border: 1.5px solid var(--line); display: block; }
+  figcaption, .hint { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  #fps { font-variant-numeric: tabular-nums; margin-top: 6px; color: var(--amber); min-height: 1.4em; }
+  .panel { background: var(--panel); border: 1.5px solid var(--line); padding: 12px 14px; margin-bottom: 12px; }
+  .panel h2 { margin: 0 0 8px; font-size: 15px; }
+  label { display: grid; grid-template-columns: 9.5em 1fr 4.5em; align-items: center; gap: 8px; margin: 6px 0; }
+  label.check { grid-template-columns: auto 1fr; }
+  select, input[type=range] { width: 100%; }
+  select, button, textarea, input[type=text] { font: inherit; color: var(--text); background: var(--ink); border: 1.5px solid var(--line); padding: 6px 8px; }
+  button { background: var(--text); color: var(--ink); border-color: var(--text); font-weight: 600; cursor: pointer; padding: 8px 12px; margin: 4px 6px 4px 0; }
+  button.secondary { background: transparent; color: var(--text); }
+  button:disabled, select:disabled, input:disabled { opacity: 0.5; cursor: default; }
+  :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+  output { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  #error { background: #4a1714; border: 1.5px solid var(--red); padding: 10px 14px; margin: 12px 16px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: left; }
+  td:nth-child(n+4) { font-variant-numeric: tabular-nums; }
+  textarea { width: 100%; height: 120px; font: 12px/1.3 ui-monospace, Consolas, monospace; }
+  #device { color: var(--muted); font-size: 13px; word-break: break-word; }
+  .key { color: var(--amber); } .fill { color: var(--blue); } .back { color: var(--red); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>Light Lab</span> rendering spike</h1>
+  <p>A test page, not the app. It compares three ways of drawing the lit portrait and measures how fast each runs on this device. Nothing is saved or sent anywhere.</p>
+</header>
+<div id="error" role="alert" hidden></div>
+<main>
+  <section aria-label="Views">
+    <div class="views">
+      <div id="stage"><div id="fps" aria-live="off"></div><div id="status" class="hint" aria-live="polite"></div></div>
+      <figure><img id="ref" alt="Reference render for the chosen look"><figcaption id="refCap"></figcaption></figure>
+    </div>
+  </section>
+  <section aria-label="Controls">
+    <div class="panel">
+      <h2>What to draw</h2>
+      <label>Candidate <select id="cand"></select><span></span></label>
+      <label>Look <select id="preset"></select><span></span></label>
+      <label>Quality
+        <select id="quality"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select><span></span></label>
+      <label>Display
+        <select id="response"><option value="linear" selected>Contrasty (matches references)</option><option value="srgb">Photographic (lifts shadows)</option></select><span></span></label>
+    </div>
+    <div class="panel">
+      <h2><span class="key">K</span> Key light</h2>
+      <label for="az">Around (azimuth) <input id="az" type="range" min="-100" max="100" step="1"><output id="azOut"></output></label>
+      <label for="el">Height <input id="el" type="range" min="-20" max="70" step="1"><output id="elOut"></output></label>
+      <label for="dist">Distance <input id="dist" type="range" min="0.5" max="3.5" step="0.05"><output id="distOut"></output></label>
+      <label for="size">Size (soft ↔ hard) <input id="size" type="range" min="0.05" max="1.5" step="0.01"><output id="sizeOut"></output></label>
+      <h2 style="margin-top:10px"><span class="fill">F</span> Fill and <span class="back">B</span> back</h2>
+      <label for="fill">Fill power <input id="fill" type="range" min="0" max="1" step="0.01"><output id="fillOut"></output></label>
+      <label class="check"><input id="back" type="checkbox"> Back light on</label>
+      <button id="png" class="secondary">Save PNG</button>
+      <button id="sheet" class="secondary">Save comparison sheet</button>
+    </div>
+    <div class="panel">
+      <h2>Benchmark</h2>
+      <p class="hint">Close other tabs and plug the device in. "All candidates" takes about 4 minutes. Don't touch the page while it runs.</p>
+      <label for="deviceNote" style="grid-template-columns: 9.5em 1fr">Device name <input id="deviceNote" type="text" placeholder="e.g. cart B Chromebook, MacBook Air M1"></label>
+      <button id="benchAll">Run all candidates</button>
+      <button id="benchOne" class="secondary">Run this candidate</button>
+      <div id="results"></div>
+      <button id="copy" class="secondary">Copy results</button>
+      <button id="download" class="secondary">Download results</button>
+      <textarea id="resultsText" readonly aria-label="Results as text"></textarea>
+      <p id="device"></p>
+    </div>
+  </section>
+</main>
+<script type="module" src="main.js"></script>
+</body>
+</html>
