@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Light Lab tests</title>
+<style>
+  body { font: 14px/1.4 system-ui, sans-serif; background: #0e0f12; color: #f3f3f5; margin: 16px; }
+  .pass { color: #7fd17f; } .fail { color: #ff7a72; font-weight: 700; }
+  li { margin: 2px 0; }
+  canvas { max-width: 100%; border: 1px solid #3b3f48; }
+</style>
+</head>
+<body>
+<h1>Light Lab tests</h1>
+<p id="summary">Running…</p>
+<ul id="list"></ul>
+<h2>Presets next to the reference renders</h2>
+<p>Top row: reference. Middle: 3D view. Bottom: simple 2D view.</p>
+<div id="sheet"></div>
+<script type="module" src="tests.js"></script>
+</body>
+</html>

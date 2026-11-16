@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Light Lab (test harness)</title>
+<link rel="stylesheet" href="../src/app.css">
+</head>
+<body>
+<script type="module">
+  // Runs the real app page with a timer-driven frame loop, so it also works in a
+  // background tab (browsers pause requestAnimationFrame there). For testing only.
+  window.requestAnimationFrame = (cb) => setTimeout(() => cb(performance.now()), 16);
+  const html = await (await fetch("../index.html")).text();
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  doc.querySelectorAll("script").forEach((s) => s.remove());
+  document.body.innerHTML = doc.body.innerHTML;
+  window.__app = await import("../src/main.js" + location.search);
+  document.title = "Light Lab (test harness) ready";
+</script>
+</body>
+</html>

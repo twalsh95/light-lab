@@ -4,19 +4,68 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Light Lab</title>
-<style>
-  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #101114; color: #f2f2f4;
-         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 34rem; padding: 24px 16px; }
-  h1 { margin: 0 0 8px; } h1 span { color: #f2a93b; }
-  a { color: #5aa9e6; }
-</style>
+<meta name="description" content="A virtual lighting studio: place lights around a model and see the portrait change.">
+<link rel="stylesheet" href="src/app.css">
 </head>
 <body>
-<main>
-  <h1><span>Light Lab</span></h1>
-  <p>A virtual lighting studio for Walsh Classroom. It's still being built.</p>
-  <p>The rendering test page is at <a href="spike/">spike/</a>.</p>
+<header class="top">
+  <h1><span class="brand">Light Lab</span></h1>
+  <div class="toolbar" role="toolbar" aria-label="Setup">
+    <div id="presets" class="group" aria-label="Presets"></div>
+    <div class="group">
+      <button id="undo" type="button" title="Undo (Ctrl+Z)">Undo</button>
+      <button id="redo" type="button" title="Redo (Ctrl+Y)">Redo</button>
+      <button id="reset" type="button">Reset</button>
+    </div>
+    <div class="group">
+      <button id="savePng" type="button" class="solid">Save PNG</button>
+      <button id="saveSetup" type="button">Save setup</button>
+      <button id="openSetup" type="button">Open setup</button>
+      <input id="openFile" type="file" accept=".json,application/json" hidden>
+    </div>
+  </div>
+</header>
+
+<div id="error" class="error" role="alert" hidden></div>
+<div id="notice" class="notice" role="dialog" aria-labelledby="noticeTitle" hidden>
+  <h2 id="noticeTitle">What Light Lab saves</h2>
+  <p>Your current setup is kept in this browser only, so it's still here next time on this computer. Nothing is sent anywhere, and there's no sign-in.</p>
+  <p>To keep a copy, use <strong>Save PNG</strong> for the picture or <strong>Save setup</strong> for the lighting settings.</p>
+  <button id="noticeOk" type="button" class="solid">Got it</button>
+</div>
+
+<main class="studio">
+  <section class="card view-card" aria-labelledby="viewTitle">
+    <h2 id="viewTitle">Camera view</h2>
+    <div id="view" class="view"><canvas id="portrait" class="portrait" role="img"></canvas></div>
+    <div id="qualityRow" class="quality">
+      <label for="quality">Quality</label>
+      <select id="quality">
+        <option value="auto" selected>Auto</option>
+        <option value="low">Low (fastest)</option>
+        <option value="medium">Medium</option>
+        <option value="high">High (sharpest)</option>
+      </select>
+      <span id="qualityNote" class="hint"></span>
+    </div>
+    <p class="note">This is a simplified studio. Real skin, hair, and lights behave in more complicated ways. Use this to build your instincts, then check them at the stations.</p>
+  </section>
+
+  <section class="card map-card" aria-labelledby="mapTitle">
+    <h2 id="mapTitle">Studio from above</h2>
+    <div id="map"></div>
+    <p class="hint">Drag a light, or Tab to it and use the arrow keys. <kbd>+</kbd> <kbd>−</kbd> change power. <kbd>Space</kbd> turns it on or off.</p>
+  </section>
+
+  <div class="side">
+    <section class="card" id="inspector" aria-label="Selected light"></section>
+    <section class="card" aria-labelledby="bdTitle"><h2 id="bdTitle">Backdrop</h2><div id="backdrop"></div></section>
+    <section class="card" aria-labelledby="camTitle"><h2 id="camTitle">Camera</h2><div id="camera"></div></section>
+  </div>
 </main>
+<p id="status" class="visually-hidden" aria-live="polite"></p>
+
+<script type="module" src="src/main.js"></script>
+<script src="/platform/wc.js" defer></script>
 </body>
 </html>
