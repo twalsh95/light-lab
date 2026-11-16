@@ -2,12 +2,13 @@
 // is a height map seen straight on, shaded per pixel on the CPU at low resolution, with
 // blurred shadows. Fewer details than the 3D view, but the same lights and the same rules:
 // falloff with distance, light size sets shadow softness, fill lifts the shadow side.
-import { HEAD, UNIT, SKIN, featureHeight } from "../scene/head.js";
-import { resolveLights, exposureFor, coneFactor, hexToRGB, norm, sub, dot } from "../scene/lightmath.js";
+import { HEAD, UNIT, featureHeight } from "../scene/head.js";
+import { resolveLights, exposureFor, coneFactor, shutterFactor, materials, whiteBalanceGain, norm, sub, dot } from "../scene/lightmath.js";
 
 const N = 128;
 const X0 = -1.5, X1 = 1.5, Y0 = 1.3, Y1 = -1.7;           // prototype framing, in head units
 const PX = (X1 - X0) / (N - 1);                           // units per pixel
+const SHOULDER_ROW = Math.round(((-0.95 - Y0) / (Y1 - Y0)) * (N - 1));
 
 function buildHeightField() {
   const H = new Float32Array(N * N);
@@ -75,7 +76,7 @@ export function createFallbackRenderer(canvas) {
       const lights = resolveLights(state);
       const R = new Float32Array(N * N), G = new Float32Array(N * N), B = new Float32Array(N * N);
       const amb = state.room.ambient;
-      const bc = hexToRGB(state.backdrop.color).map((c) => c * state.backdrop.brightness);
+      const mat = materials(state);
       const zb = -state.backdrop.distance;
 
       for (const L of lights) {
@@ -122,28 +123,24 @@ export function createFallbackRenderer(canvas) {
               const v = sub(L.position, p), d2 = dot(v, v), l = norm(v);
               const wrap = Math.min(0.35, tanA * 0.6);
               const ndl = Math.max(0, (nx[k] * l[0] + ny[k] * l[1] + nz[k] * l[2] + wrap) / (1 + wrap));
-              e = (ndl * coneFactor(L, sub(p, L.position)) * sh[k]) / d2;
-              e *= SKIN.albedo[1];
+              e = (ndl * coneFactor(L, sub(p, L.position)) * shutterFactor(L, p) * sh[k]) / d2;
             } else {
               const p = [x * (2.2 - zb) / 2.2, y, zb];
               const v = sub(L.position, p), d2 = dot(v, v), l = norm(v);
-              e = (Math.max(0, l[2]) * coneFactor(L, sub(p, L.position)) / d2) * (wall ? 1 - 0.9 * wall[k] : 1);
-              e *= bc[1];
+              e = (Math.max(0, l[2]) * coneFactor(L, sub(p, L.position)) * shutterFactor(L, p) / d2) * (wall ? 1 - 0.9 * wall[k] : 1);
             }
             R[k] += e * col[0]; G[k] += e * col[1]; B[k] += e * col[2];
           }
         }
       }
-      const ex = exposureFor(state);
-      const skinTint = SKIN.albedo.map((a) => a / SKIN.albedo[1]);
-      const bdTint = bc[1] > 0 ? bc.map((a) => a / bc[1]) : [1, 1, 1];
+      const ex = exposureFor(state), wb = whiteBalanceGain(state);
       for (let k = 0; k < N * N; k++) {
-        const t = mask[k] ? skinTint : bdTint;
-        const a = mask[k] ? SKIN.albedo[1] : bc[1];
+        // Shoulders (below the neck) wear the clothing colour.
+        const a = !mask[k] ? mat.backdrop : Math.floor(k / N) > SHOULDER_ROW ? mat.clothing : mat.skin;
         const o = k * 4;
-        img.data[o]     = 255 * Math.min(1, ex * (R[k] * t[0] + amb * a * t[0]));
-        img.data[o + 1] = 255 * Math.min(1, ex * (G[k] * t[1] + amb * a * t[1]));
-        img.data[o + 2] = 255 * Math.min(1, ex * (B[k] * t[2] + amb * a * t[2]));
+        img.data[o]     = 255 * Math.min(1, ex * wb[0] * a[0] * (R[k] + amb));
+        img.data[o + 1] = 255 * Math.min(1, ex * wb[1] * a[1] * (G[k] + amb));
+        img.data[o + 2] = 255 * Math.min(1, ex * wb[2] * a[2] * (B[k] + amb));
         img.data[o + 3] = 255;
       }
       sctx.putImageData(img, 0, 0);

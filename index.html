@@ -19,6 +19,7 @@
     </div>
     <div class="group">
       <button id="savePng" type="button" class="solid">Save PNG</button>
+      <button id="savePdf" type="button">Save PDF</button>
       <button id="saveSetup" type="button">Save setup</button>
       <button id="openSetup" type="button">Open setup</button>
       <input id="openFile" type="file" accept=".json,application/json" hidden>
@@ -30,7 +31,7 @@
 <div id="notice" class="notice" role="dialog" aria-labelledby="noticeTitle" hidden>
   <h2 id="noticeTitle">What Light Lab saves</h2>
   <p>Your current setup is kept in this browser only, so it's still here next time on this computer. Nothing is sent anywhere, and there's no sign-in.</p>
-  <p>To keep a copy, use <strong>Save PNG</strong> for the picture or <strong>Save setup</strong> for the lighting settings.</p>
+  <p>To keep a copy, use <strong>Save PNG</strong> or <strong>Save PDF</strong> for the picture, diagram and settings, or <strong>Save setup</strong> for a file you can open again later.</p>
   <button id="noticeOk" type="button" class="solid">Got it</button>
 </div>
 
@@ -54,11 +55,13 @@
   <section class="card map-card" aria-labelledby="mapTitle">
     <h2 id="mapTitle">Studio from above</h2>
     <div id="map"></div>
-    <p class="hint">Drag a light, or Tab to it and use the arrow keys. <kbd>+</kbd> <kbd>−</kbd> change power. <kbd>Space</kbd> turns it on or off.</p>
+    <p class="hint">Drag a light, or Tab to it and use the arrow keys. <kbd>+</kbd> <kbd>−</kbd> change power. <kbd>Space</kbd> turns it on or off. <kbd>Delete</kbd> removes it.</p>
   </section>
 
   <div class="side">
     <section class="card" id="inspector" aria-label="Selected light"></section>
+    <section class="card" aria-labelledby="studioTitle"><h2 id="studioTitle">Studio</h2><div id="studio"></div></section>
+    <section class="card" aria-labelledby="subjTitle"><h2 id="subjTitle">Subject</h2><div id="subject"></div></section>
     <section class="card" aria-labelledby="bdTitle"><h2 id="bdTitle">Backdrop</h2><div id="backdrop"></div></section>
     <section class="card" aria-labelledby="camTitle"><h2 id="camTitle">Camera</h2><div id="camera"></div></section>
   </div>

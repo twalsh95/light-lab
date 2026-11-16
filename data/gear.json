@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "notes": [
+    "Tom's real room (list given Nov 16 2026). Every number has a source. Anything marked \"estimate\": true still needs checking against the fixture's label or manual.",
+    "luxAt1m = light on the beam axis 1 m away, with the fixture's default modifier. coneDeg = half the beam angle. size = the width of the light surface the subject sees, in metres.",
+    "Modifier factor multiplies the fixture's luxAt1m (softboxes and umbrellas spread the light, so less reaches the subject)."
+  ],
+  "fixtures": {
+    "studio-light": {
+      "name": "Any-size studio light (Open studio only)", "short": "Studio light", "count": 0, "openOnly": true, "kind": "generic",
+      "luxAt1m": 10000, "kelvin": [2700, 6500], "rgb": false, "dimmable": true,
+      "defaultModifier": "any-size", "modifiers": ["any-size"],
+      "source": "Imaginary light for experimenting: choose any size."
+    },
+    "cb60-rgb": {
+      "name": "Neewer CB60 RGB", "short": "CB60 RGB", "count": 2, "kind": "led-cob",
+      "luxAt1m": 18000, "kelvin": [2700, 6500], "rgb": true, "dimmable": true,
+      "defaultModifier": "cb60-reflector", "modifiers": ["cb60-reflector", "cb60-softbox", "umbrella-white", "umbrella-silver", "umbrella-gold", "snoot", "gobo"],
+      "source": "Neewer spec sheet: 18000 lux at 1 m, 2700-6500 K, RGB/HSI, Bowens mount, umbrella hole."
+    },
+    "d50": {
+      "name": "Dazzne D50 bi-colour panel", "short": "D50 panel", "count": 2, "kind": "led-panel",
+      "luxAt1m": 1150, "kelvin": [3000, 8000], "rgb": false, "dimmable": true,
+      "defaultModifier": "panel-bare", "modifiers": ["panel-bare"],
+      "panelSize": 0.35, "panelSizeEstimate": true,
+      "source": "Seller listings: 45 W, 3000-8000 K, 1150 lux at 1 m (not confirmed by Dazzne).", "estimate": true
+    },
+    "fresnel-650": {
+      "name": "Halogen Fresnel 650 W", "short": "650 W Fresnel", "count": 2, "kind": "tungsten-fresnel",
+      "luxAt1m": { "spot": 52750, "flood": 10750 }, "beamDeg": { "spot": 13, "flood": 54 },
+      "kelvin": [3200, 3200], "rgb": false, "dimmable": false, "barnDoors": true, "lensSize": 0.11,
+      "defaultModifier": "fresnel-lens", "modifiers": ["fresnel-lens"],
+      "source": "ARRI 650 Plus photometrics (5861 lux spot / 1194 lux flood at 3 m, 13-54 degrees), scaled to 1 m. 650 W FRK lamps are 3200 K. Brand, barn doors and dimming not confirmed.", "estimate": true
+    },
+    "fresnel-300": {
+      "name": "Halogen Fresnel 300 W", "short": "300 W Fresnel", "count": 2, "kind": "tungsten-fresnel",
+      "luxAt1m": { "spot": 16600, "flood": 4880 }, "beamDeg": { "spot": 14, "flood": 53 },
+      "kelvin": [3200, 3200], "rgb": false, "dimmable": false, "barnDoors": true, "lensSize": 0.08,
+      "defaultModifier": "fresnel-lens", "modifiers": ["fresnel-lens"],
+      "source": "ARRI 300 Plus: 14-53 degrees, about 16,600 lux at 1 m spot (B&H). Flood figure from a similar 300 W Fresnel (Panavision, 542 lux at 3 m). Brand, barn doors and dimming not confirmed.", "estimate": true
+    },
+    "s45-rgb": {
+      "name": "Switti S45 RGB panel", "short": "S45 RGB", "count": 2, "kind": "led-panel",
+      "luxAt1m": 5000, "kelvin": [3000, 8000], "rgb": true, "dimmable": true,
+      "defaultModifier": "panel-bare", "modifiers": ["panel-bare", "s45-softbox"],
+      "panelSize": 0.25, "panelSizeEstimate": true,
+      "source": "No S45 RGB spec found. Numbers from the Switti S45C bi-colour kit (5000 lux at 1 m, 3000-8000 K). RGB per Tom.", "estimate": true
+    },
+    "torjim-85": {
+      "name": "Torjim 85 W LED can light", "short": "Torjim can", "count": 2, "kind": "led-bulb",
+      "luxAt1m": 600, "kelvin": [3000, 7500], "rgb": false, "dimmable": true,
+      "defaultModifier": "torjim-softbox", "modifiers": ["torjim-softbox", "bare-bulb"],
+      "source": "Torjim kit listings: 85 W, 3000-7500 K, 16x16 in softbox. No lux published; 600 lux at 1 m in the softbox is an estimate.", "estimate": true
+    }
+  },
+  "modifiers": {
+    "any-size":       { "name": "Any size", "count": 99, "factor": 1, "size": 0.6, "coneDeg": 60, "source": "Open studio only." },
+    "cb60-reflector": { "name": "Standard reflector (cone)", "count": 2, "factor": 1, "size": 0.18, "coneDeg": 30, "estimate": true, "source": "Included with the CB60. Size and beam angle estimated." },
+    "cb60-softbox":   { "name": "CB60 softbox", "count": 2, "factor": 0.3, "size": 0.6, "coneDeg": 60, "estimate": true, "source": "Size and output loss estimated." },
+    "s45-softbox":    { "name": "S45 softbox", "count": 2, "factor": 0.6, "size": 0.4, "coneDeg": 60, "estimate": true, "source": "Size and output loss estimated." },
+    "torjim-softbox": { "name": "16 in softbox", "count": 2, "factor": 1, "size": 0.4, "coneDeg": 60, "source": "Torjim kit: 16x16 in softbox (the lux figure already includes it)." },
+    "bare-bulb":      { "name": "Bare bulb", "count": 99, "factor": 1.6, "size": 0.1, "coneDeg": 80, "estimate": true, "source": "Estimated." },
+    "panel-bare":     { "name": "Panel (no modifier)", "count": 99, "factor": 1, "sizeFromFixture": true, "coneDeg": 55, "estimate": true, "source": "LED panels spread about 110 degrees (estimate)." },
+    "fresnel-lens":   { "name": "Fresnel lens (spot to flood)", "count": 99, "factor": 1, "sizeFromFixture": true, "beamFromFixture": true, "source": "Built into the Fresnel." },
+    "umbrella-white": { "name": "White shoot-through umbrella", "count": 2, "factor": 0.35, "size": 0.84, "coneDeg": 75, "estimate": true, "source": "Size assumed 33 in. Output loss estimated." },
+    "umbrella-silver":{ "name": "Silver bounce umbrella", "count": 1, "factor": 0.45, "size": 0.84, "coneDeg": 60, "estimate": true, "source": "Size assumed 33 in. Output loss estimated." },
+    "umbrella-gold":  { "name": "Gold bounce umbrella", "count": 1, "factor": 0.4, "size": 0.84, "coneDeg": 60, "tint": [1.0, 0.8, 0.52], "estimate": true, "source": "Size assumed 33 in. Output loss and gold colour estimated." },
+    "snoot":          { "name": "Snoot", "count": 1, "factor": 1.4, "size": 0.06, "coneDeg": 9, "gels": true, "estimate": true, "source": "Beam angle and output estimated." },
+    "gobo":           { "name": "Gobo projector", "count": 2, "factor": 0.25, "size": 0.03, "coneDeg": 14, "gobo": true, "estimate": true, "source": "Bowens gobo holder. Beam angle and output estimated." }
+  },
+  "gels": {
+    "none":   { "name": "No gel", "color": [1, 1, 1] },
+    "red":    { "name": "Red gel",    "color": [0.85, 0.05, 0.04], "estimate": true },
+    "blue":   { "name": "Blue gel",   "color": [0.08, 0.2, 0.85], "estimate": true },
+    "yellow": { "name": "Yellow gel", "color": [0.95, 0.85, 0.15], "estimate": true },
+    "green":  { "name": "Green gel",  "color": [0.12, 0.7, 0.15], "estimate": true }
+  },
+  "gobos": {
+    "window": { "name": "Window" },
+    "blinds": { "name": "Blinds" },
+    "dots":   { "name": "Dots" },
+    "branches": { "name": "Bars (diagonal)" }
+  },
+  "reflectors": {
+    "flag-gold-silver": { "name": "Gold/silver reflector flag", "count": 1, "width": 0.6, "height": 0.9,
+      "sides": { "gold": { "name": "Gold side", "reflect": 0.7, "tint": [1.0, 0.8, 0.5] }, "silver": { "name": "Silver side", "reflect": 0.85, "tint": [1, 1, 1] } },
+      "estimate": true, "source": "Size assumed 24x36 in. Reflectance estimated." },
+    "flag-black-white": { "name": "Black/white flag", "count": 1, "width": 0.6, "height": 0.9,
+      "sides": { "white": { "name": "White side (bounce)", "reflect": 0.75, "tint": [1, 1, 1] }, "black": { "name": "Black side (blocks light)", "reflect": 0 } },
+      "estimate": true, "source": "Size assumed 24x36 in. Reflectance estimated." }
+  },
+  "backdrops": {
+    "white": { "name": "White", "color": [0.86, 0.85, 0.83] },
+    "black": { "name": "Black", "color": [0.03, 0.03, 0.03] },
+    "green": { "name": "Chroma green", "color": [0.06, 0.42, 0.12], "estimate": true }
+  },
+  "stations": {
+    "notes": "Which gear lives at which station is a guess until Tom confirms it.",
+    "estimate": true,
+    "three-point": { "name": "Three-Point station", "backdrops": ["green", "white", "black"],
+      "fixtures": { "cb60-rgb": 2, "d50": 2 },
+      "modifiers": { "cb60-reflector": 2, "cb60-softbox": 2, "umbrella-white": 2, "snoot": 1, "gobo": 2 },
+      "reflectors": { "flag-black-white": 1 } },
+    "high-key": { "name": "High-Key station", "backdrops": ["white"],
+      "fixtures": { "torjim-85": 2, "s45-rgb": 2 },
+      "modifiers": { "torjim-softbox": 2, "s45-softbox": 2 },
+      "reflectors": { "flag-gold-silver": 1 } },
+    "low-key": { "name": "Low-Key station", "backdrops": ["black"],
+      "fixtures": { "fresnel-650": 2, "fresnel-300": 2 },
+      "modifiers": { "umbrella-silver": 1, "umbrella-gold": 1 },
+      "reflectors": {} }
+  },
+  "skins": {
+    "clay":         { "name": "Clay (grey)", "albedo": [0.74, 0.718, 0.688] },
+    "light":        { "name": "Light",        "albedo": [0.70, 0.52, 0.42] },
+    "light-medium": { "name": "Light-medium", "albedo": [0.55, 0.38, 0.28] },
+    "medium":       { "name": "Medium",       "albedo": [0.40, 0.26, 0.17] },
+    "medium-deep":  { "name": "Medium-deep",  "albedo": [0.24, 0.15, 0.10] },
+    "deep":         { "name": "Deep",         "albedo": [0.12, 0.075, 0.05] }
+  },
+  "clothing": {
+    "match":       { "name": "Same as skin" },
+    "white-shirt": { "name": "White shirt", "albedo": [0.8, 0.8, 0.79] },
+    "dark-jacket": { "name": "Dark jacket", "albedo": [0.035, 0.035, 0.04] }
+  }
+}

@@ -4,14 +4,14 @@
 // and distance (a cone of half-angle atan(radius / distance)), so big + close = soft,
 // small + far = hard, and a shadow softens the farther it falls from what casts it.
 import { CAMERA, HEAD, UNIT, SKIN } from "../scene/head.js";
-import { resolveLights, exposureFor, hexToRGB } from "../scene/lightmath.js";
+import { resolveLights, exposureFor, materials, whiteBalanceGain } from "../scene/lightmath.js";
 
 export const LEVELS = {
   low:    { scale: 0.5,  steps: 48, shadowSteps: 20 },
   medium: { scale: 0.75, steps: 64, shadowSteps: 32 },
   high:   { scale: 1.0,  steps: 96, shadowSteps: 48 },
 };
-const MAX_LIGHTS = 4;
+const MAX_LIGHTS = 10;
 
 const VERT = `#version 300 es
 in vec2 aPos; out vec2 vUv;
@@ -31,8 +31,9 @@ uniform vec3 uCamPos; uniform vec3 uCamTarget; uniform float uFov;
 uniform int uNumLights;
 uniform vec3 uLPos[${MAX_LIGHTS}]; uniform vec3 uLDir[${MAX_LIGHTS}]; uniform vec3 uLCol[${MAX_LIGHTS}];
 uniform float uLSize[${MAX_LIGHTS}]; uniform vec2 uLCone[${MAX_LIGHTS}]; uniform int uLShadow[${MAX_LIGHTS}];
-uniform float uBackZ; uniform vec3 uBackAlb; uniform float uAmbient; uniform vec3 uSkin;
-uniform float uExposure;
+uniform vec4 uLShut[${MAX_LIGHTS}]; uniform int uLGobo[${MAX_LIGHTS}];
+uniform float uBackZ; uniform vec3 uBackAlb; uniform float uAmbient; uniform vec3 uSkin; uniform vec3 uCloth;
+uniform float uExposure; uniform vec3 uWB;
 
 const float UNIT = ${f4(UNIT)};
 float sdEllipsoid(vec3 p, vec3 c, vec3 r){ p -= c; float k0 = length(p / r); float k1 = length(p / (r * r)); return k0 * (k0 - 1.0) / k1; }
@@ -75,6 +76,44 @@ float softShadow(vec3 ro, vec3 rd, float tmax, float tanA){
   res = max(res, -1.0);
   return 0.25 * (1.0 + res) * (1.0 + res) * (2.0 - res);
 }
+// Is this point the clothing (shoulders) rather than skin?
+bool isClothing(vec3 pw){
+  vec3 p = pw / UNIT;
+  float neck = sdEllipsoid(p, ${vec3(HEAD.neck.c)}, ${vec3(HEAD.neck.r)});
+  float sh = sdEllipsoid(p, ${vec3(HEAD.shoulders.c)}, ${vec3(HEAD.shoulders.r)});
+  return sh < neck && p.y < -0.9;
+}
+// Gobo patterns, in beam coordinates (-1..1 across the beam). 1 = light passes.
+float gobo(int id, vec2 uv){
+  if (id == 1){ // window: four panes with a frame
+    vec2 g = abs(fract(uv * 1.2 + 0.5) - 0.5);
+    return smoothstep(0.03, 0.07, min(g.x, g.y)) * step(max(abs(uv.x), abs(uv.y)), 0.85);
+  }
+  if (id == 2) return smoothstep(0.15, 0.35, abs(fract(uv.y * 3.5) - 0.5) * 2.0);          // blinds
+  if (id == 3) return 1.0 - smoothstep(0.2, 0.3, length(fract(uv * 2.5) - 0.5));         // dots
+  if (id == 4) return smoothstep(0.2, 0.4, abs(fract((uv.x + uv.y) * 2.2) - 0.5) * 2.0);  // diagonal bars
+  return 1.0;
+}
+// Barn doors, flags and gobos: how much of the beam reaches this point.
+float beamMask(int i, vec3 p, float tanA){
+  vec3 f = uLDir[i];
+  vec3 r = cross(f, vec3(0.0, 1.0, 0.0));
+  r = length(r) < 0.001 ? vec3(1.0, 0.0, 0.0) : normalize(r);
+  vec3 u = cross(r, f);
+  vec3 v = p - uLPos[i]; float z = dot(v, f);
+  if (z <= 0.0) return 0.0;
+  float x = dot(v, r) / z, y = dot(v, u) / z;
+  // Edges blur with the size of the light (a barn door sits about 0.25 m from the source).
+  float w = clamp(tanA * 2.0, 0.015, 0.3);
+  vec4 s = uLShut[i];
+  float m = smoothstep(s.x - w, s.x + w, x) * (1.0 - smoothstep(s.y - w, s.y + w, x))
+          * smoothstep(s.z - w, s.z + w, y) * (1.0 - smoothstep(s.w - w, s.w + w, y));
+  if (uLGobo[i] > 0){
+    float T = sqrt(max(0.0, 1.0 - uLCone[i].x * uLCone[i].x)) / max(uLCone[i].x, 0.01);
+    m *= gobo(uLGobo[i], vec2(x, y) / T);
+  }
+  return m;
+}
 vec3 shade(vec3 p, vec3 n, vec3 v, vec3 alb, float rough, float specOn){
   vec3 col = alb * uAmbient * (0.75 + 0.25 * n.y);
   for (int i = 0; i < ${MAX_LIGHTS}; i++){
@@ -82,6 +121,7 @@ vec3 shade(vec3 p, vec3 n, vec3 v, vec3 alb, float rough, float specOn){
     vec3 toL = uLPos[i] - p; float d2 = dot(toL, toL); float d = sqrt(d2); vec3 l = toL / d;
     float c = smoothstep(uLCone[i].x, uLCone[i].y, dot(-l, uLDir[i])); if (c <= 0.0) continue;
     float tanA = max(0.004, uLSize[i] * 0.5 / d);
+    c *= beamMask(i, p, tanA); if (c <= 0.0) continue;
     float wrap = min(0.35, tanA * 0.6);
     float ndl = clamp((dot(n, l) + wrap) / (1.0 + wrap), 0.0, 1.0);
     if (ndl <= 0.0) continue;
@@ -113,14 +153,18 @@ void main(){
       t += h;
       if (t > t1) break;
     }
-    if (hit){ vec3 p = ro + rd * t; col = shade(p, calcNormal(p), -rd, uSkin, ${SKIN.roughness.toFixed(3)}, 1.0); }
+    if (hit){
+      vec3 p = ro + rd * t;
+      bool cloth = isClothing(p);
+      col = shade(p, calcNormal(p), -rd, cloth ? uCloth : uSkin, cloth ? 0.8 : ${SKIN.roughness.toFixed(3)}, cloth ? 0.3 : 1.0);
+    }
   }
   if (!hit){
     float tb = (uBackZ - ro.z) / rd.z;
     col = shade(ro + rd * tb, vec3(0.0, 0.0, 1.0), -rd, uBackAlb, 1.0, 0.0);
   }
   // Linear values shown directly, then clipped: the contrasty look of the reference renders.
-  outColor = vec4(clamp(col * uExposure, 0.0, 1.0), 1.0);
+  outColor = vec4(clamp(col * uExposure * uWB, 0.0, 1.0), 1.0);
 }`;
 }
 
@@ -165,12 +209,16 @@ export function createShaderRenderer(canvas) {
     gl.uniform1fv(U.uLSize, pad((l) => [l.size], 1));
     gl.uniform2fv(U.uLCone, pad((l) => [Math.cos(l.coneDeg * Math.PI / 180), Math.cos(l.coneDeg * 0.6 * Math.PI / 180)], 2));
     gl.uniform1iv(U.uLShadow, new Int32Array(Array.from({ length: MAX_LIGHTS }, (_, i) => (L[i] && L[i].shadow ? 1 : 0))));
-    const b = state.backdrop, bc = hexToRGB(b.color);
-    gl.uniform1f(U.uBackZ, -b.distance);
-    gl.uniform3fv(U.uBackAlb, bc.map((c) => c * b.brightness));
+    gl.uniform4fv(U.uLShut, pad((l) => [l.shutters.xmin, l.shutters.xmax, l.shutters.ymin, l.shutters.ymax], 4));
+    gl.uniform1iv(U.uLGobo, new Int32Array(Array.from({ length: MAX_LIGHTS }, (_, i) => (L[i] ? L[i].gobo || 0 : 0))));
+    const mat = materials(state);
+    gl.uniform1f(U.uBackZ, -state.backdrop.distance);
+    gl.uniform3fv(U.uBackAlb, mat.backdrop);
     gl.uniform1f(U.uAmbient, state.room.ambient);
-    gl.uniform3fv(U.uSkin, SKIN.albedo);
+    gl.uniform3fv(U.uSkin, mat.skin);
+    gl.uniform3fv(U.uCloth, mat.clothing);
     gl.uniform1f(U.uExposure, exposureFor(state));
+    gl.uniform3fv(U.uWB, whiteBalanceGain(state));
     gl.uniform3fv(U.uCamPos, CAMERA.position);
     gl.uniform3fv(U.uCamTarget, CAMERA.target);
     gl.uniform1f(U.uFov, CAMERA.fovDeg);

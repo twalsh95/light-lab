@@ -103,4 +103,34 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--key); }
 .map .bglight .shape { fill: var(--bg-light); }
 .map .bglight.off .shape { fill: none; stroke: var(--bg-light); stroke-width: 0.02; }
 
+/* Phase 3: more roles, reflectors, gear rows */
+:root { --hair: #f08cd0; --accent: #7bd88f; --bglight: #c9cdd6; --gold: #e2b54a; --silver: #d4d8df; }
+.row.select { grid-template-columns: 7.5em 1fr; }
+.row.select select { width: 100%; }
+.row.text { grid-template-columns: 7.5em 1fr; color: var(--muted); }
+.row.actions { grid-template-columns: 1fr; }
+.rowlabel { color: var(--text); }
+.hint.source { font-size: 12px; }
+.addrow { display: grid; grid-template-columns: 7.5em 1fr auto auto; gap: 6px; align-items: center; margin: 8px 0; }
+@media (max-width: 1400px) { .addrow { grid-template-columns: 1fr 1fr; } .addrow label { grid-column: 1 / -1; } }
+.addrow select { min-width: 0; }
+.problems { margin: 6px 0; padding: 8px 10px 8px 26px; border: 1.5px solid var(--key); background: #2b2210; }
+.badge.hair { background: var(--hair); clip-path: polygon(0 0, 100% 0, 50% 100%); font-size: 12px; padding-bottom: 6px; }
+.badge.accent { background: var(--accent); clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); }
+.badge.backdrop { background: var(--bglight); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); font-size: 10px; }
+.badge.reflector { background: var(--gold); }
+.map .ray.hair, .map .beam.hair { stroke: var(--hair); fill: var(--hair); }
+.map .ray.accent, .map .beam.accent { stroke: var(--accent); fill: var(--accent); }
+.map .ray.reflector { stroke: var(--gold); stroke-width: 0.012; stroke-dasharray: 0.03 0.04; }
+.map .ray.hidden { display: none; }
+.map .light.hair .shape { fill: var(--hair); } .map .light.hair .size { stroke: var(--hair); }
+.map .light.accent .shape { fill: var(--accent); } .map .light.accent .size { stroke: var(--accent); }
+.map .light.backdrop .shape { fill: var(--bglight); }
+.map .light.hair.off .shape { stroke: var(--hair); } .map .light.accent.off .shape { stroke: var(--accent); } .map .light.backdrop.off .shape { stroke: var(--bglight); }
+.map .light.reflector .card { stroke: var(--ink); stroke-width: 0.02; }
+.map .light.reflector.white .card { fill: #f2f2f2; }
+.map .light.reflector.silver .card { fill: var(--silver); }
+.map .light.reflector.gold .card { fill: var(--gold); }
+.map .light.reflector .letter { fill: var(--text); }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
