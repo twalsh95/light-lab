@@ -11,7 +11,9 @@ Written Nov 16 2026. Sources: `Light_Lab_Claude_Code_Brief.md`, the 7 reference 
 - **Devices:** Chromebooks are the baseline. The spike page reports the device's GPU and browser itself.
 - **Look:** Light Lab's own palette under the WC bar; its hub card goes in the Studios group.
 - **Not needed:** leaderboards, classes.
-- **Open:** gear specs (pending), and items 4, 8, 9b, 9c, 9d (explained, waiting on Tom).
+- **Recommendations accepted with the Phase 0 approval:** decide Phase 7 after Phase 4; galleries wait for platform work; Narrative Studio comment filter waits for teacher comments; authored content saved as JSON files in the repo; no audio notes (Chromebook dictation instead).
+- **Renderer (Phase 1, Nov 16 2026):** B, the custom shader, with A as a backup and C deferred. See `PHASE1_SPIKE_RESULTS.md`. No Chromebook was available, so its numbers are estimates.
+- **Open:** gear specs (needed by Phase 3).
 
 ## 1. What PLATFORM.md changes in the brief
 

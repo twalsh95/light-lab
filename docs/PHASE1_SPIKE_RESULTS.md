@@ -54,7 +54,11 @@ Assumptions, all estimates:
 | Complexity cost | Low: well-documented library | Medium: custom shader code; the head is a maths shape | High: the library's WebGL version is deprecated |
 | Risk on unknown Chromebooks | Low | Low to medium (ARM GPUs) | High |
 
-## Recommendation (Tom chooses)
+## Decision (Tom, Nov 16 2026)
+
+**B, the custom shader, renders the studio.** A stays in `spike/` as the backup if ARM Chromebooks struggle. C is set aside until Phase 7. Phase 1 is closed.
+
+## Recommendation (as given)
 
 **B for the studio, with A kept as a backup and C left for Phase 7.**
 
