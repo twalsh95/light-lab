@@ -4,6 +4,7 @@
 // falloff with distance, light size sets shadow softness, fill lifts the shadow side.
 import { HEAD, UNIT, featureHeight } from "../scene/head.js";
 import { resolveLights, exposureFor, coneFactor, shutterFactor, materials, whiteBalanceGain, norm, sub, dot } from "../scene/lightmath.js";
+import { computeMetrics, referenceMasks } from "../metrics/metrics.js";
 
 const N = 128;
 const X0 = -1.5, X1 = 1.5, Y0 = 1.3, Y1 = -1.7;           // prototype framing, in head units
@@ -65,75 +66,93 @@ export function createFallbackRenderer(canvas) {
   const sctx = small.getContext("2d");
   const img = sctx.createImageData(N, N);
 
+  // The light falling on each pixel of the height-map head and the backdrop (before the
+  // surface colour), plus everything needed to turn it into a picture.
+  function light(state) {
+    const { H, mask, nx, ny, nz } = field;
+    const lights = resolveLights(state);
+    const R = new Float32Array(N * N), G = new Float32Array(N * N), B = new Float32Array(N * N);
+    const amb = state.room.ambient;
+    const mat = materials(state);
+    const zb = -state.backdrop.distance;
+
+    for (const L of lights) {
+      const toL = norm(L.position);                          // from the face toward the light
+      const d = Math.hypot(...L.position);
+      const tanA = Math.max(0.004, (L.size / 2) / d);
+      // Shadow on the subject: march across the height field toward the light.
+      let sh = new Float32Array(N * N).fill(1);
+      if (L.shadow && L.role !== "backdrop") {
+        const lz = Math.max(toL[2], 0.2);
+        for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+          const k = j * N + i;
+          if (!mask[k]) continue;
+          for (let s = 1; s <= 24; s++) {
+            const dist = s * 0.05;                             // head units along the ray
+            const ii = Math.round(i + (toL[0] / lz) * dist / PX), jj = Math.round(j - (toL[1] / lz) * dist / PX);
+            if (ii < 0 || jj < 0 || ii >= N || jj >= N) break;
+            if (H[jj * N + ii] > H[k] + dist * 0.9) { sh[k] = 0; break; }
+          }
+        }
+        // Softness from the light's size: bigger or closer = wider blur.
+        sh = blur(sh, Math.round(Math.min(8, 1 + tanA * 40)));
+      }
+      // Shadow of the subject on the backdrop (only for lights in front of the subject).
+      let wall = null;
+      if (L.shadow && toL[2] > 0.15) {
+        const gap = state.backdrop.distance / UNIT;            // head-to-backdrop, head units
+        const ox = Math.round((-toL[0] / toL[2]) * gap / PX), oy = Math.round((toL[1] / toL[2]) * gap / PX);
+        const m = new Float32Array(N * N);
+        for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+          const si = i - ox, sj = j - oy;
+          if (si >= 0 && sj >= 0 && si < N && sj < N && mask[sj * N + si]) m[j * N + i] = 1;
+        }
+        wall = blur(m, Math.round(Math.min(14, 2 + tanA * gap * 2)));
+      }
+      const col = L.color.map((c) => c * L.intensity);
+      for (let j = 0; j < N; j++) {
+        const y = (Y0 + (Y1 - Y0) * (j / (N - 1))) * UNIT;
+        for (let i = 0; i < N; i++) {
+          const k = j * N + i, x = (X0 + PX * i) * UNIT;
+          let e;
+          if (mask[k]) {
+            const p = [x, y, H[k] * UNIT];
+            const v = sub(L.position, p), d2 = dot(v, v), l = norm(v);
+            const wrap = Math.min(0.35, tanA * 0.6);
+            const ndl = Math.max(0, (nx[k] * l[0] + ny[k] * l[1] + nz[k] * l[2] + wrap) / (1 + wrap));
+            e = (ndl * coneFactor(L, sub(p, L.position)) * shutterFactor(L, p) * sh[k]) / d2;
+          } else {
+            const p = [x * (2.2 - zb) / 2.2, y, zb];
+            const v = sub(L.position, p), d2 = dot(v, v), l = norm(v);
+            e = (Math.max(0, l[2]) * coneFactor(L, sub(p, L.position)) * shutterFactor(L, p) / d2) * (wall ? 1 - 0.9 * wall[k] : 1);
+          }
+          R[k] += e * col[0]; G[k] += e * col[1]; B[k] += e * col[2];
+        }
+      }
+    }
+    return { R, G, B, ex: exposureFor(state), wb: whiteBalanceGain(state), mat, amb };
+  }
+
   return {
     kind: "2d",
     lost: false,
     warm() {},
+    // Measuring: unclipped values with the reference masks (same framing as the prototype).
+    measure(state) {
+      const { R, G, B, ex, wb, mat, amb } = light(state);
+      const { mask } = field;
+      const rgb = new Float32Array(N * N * 3);
+      for (let k = 0; k < N * N; k++) {
+        const a = !mask[k] ? mat.backdrop : Math.floor(k / N) > SHOULDER_ROW ? mat.clothing : mat.skin;
+        rgb[k * 3] = ex * wb[0] * a[0] * (R[k] + amb); rgb[k * 3 + 1] = ex * wb[1] * a[1] * (G[k] + amb); rgb[k * 3 + 2] = ex * wb[2] * a[2] * (B[k] + amb);
+      }
+      return computeMetrics({ w: N, h: N, rgb, ...referenceMasks(N, N) });
+    },
     render(state, _level, cssSize) {
       const px = Math.round(cssSize * Math.min(2, window.devicePixelRatio || 1));
       if (canvas.width !== px) { canvas.width = px; canvas.height = px; }
-      const { H, mask, nx, ny, nz } = field;
-      const lights = resolveLights(state);
-      const R = new Float32Array(N * N), G = new Float32Array(N * N), B = new Float32Array(N * N);
-      const amb = state.room.ambient;
-      const mat = materials(state);
-      const zb = -state.backdrop.distance;
-
-      for (const L of lights) {
-        const toL = norm(L.position);                          // from the face toward the light
-        const d = Math.hypot(...L.position);
-        const tanA = Math.max(0.004, (L.size / 2) / d);
-        // Shadow on the subject: march across the height field toward the light.
-        let sh = new Float32Array(N * N).fill(1);
-        if (L.shadow && L.role !== "backdrop") {
-          const lz = Math.max(toL[2], 0.2);
-          for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-            const k = j * N + i;
-            if (!mask[k]) continue;
-            for (let s = 1; s <= 24; s++) {
-              const dist = s * 0.05;                             // head units along the ray
-              const ii = Math.round(i + (toL[0] / lz) * dist / PX), jj = Math.round(j - (toL[1] / lz) * dist / PX);
-              if (ii < 0 || jj < 0 || ii >= N || jj >= N) break;
-              if (H[jj * N + ii] > H[k] + dist * 0.9) { sh[k] = 0; break; }
-            }
-          }
-          // Softness from the light's size: bigger or closer = wider blur.
-          sh = blur(sh, Math.round(Math.min(8, 1 + tanA * 40)));
-        }
-        // Shadow of the subject on the backdrop (only for lights in front of the subject).
-        let wall = null;
-        if (L.shadow && toL[2] > 0.15) {
-          const gap = state.backdrop.distance / UNIT;            // head-to-backdrop, head units
-          const ox = Math.round((-toL[0] / toL[2]) * gap / PX), oy = Math.round((toL[1] / toL[2]) * gap / PX);
-          const m = new Float32Array(N * N);
-          for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-            const si = i - ox, sj = j - oy;
-            if (si >= 0 && sj >= 0 && si < N && sj < N && mask[sj * N + si]) m[j * N + i] = 1;
-          }
-          wall = blur(m, Math.round(Math.min(14, 2 + tanA * gap * 2)));
-        }
-        const col = L.color.map((c) => c * L.intensity);
-        for (let j = 0; j < N; j++) {
-          const y = (Y0 + (Y1 - Y0) * (j / (N - 1))) * UNIT;
-          for (let i = 0; i < N; i++) {
-            const k = j * N + i, x = (X0 + PX * i) * UNIT;
-            let e;
-            if (mask[k]) {
-              const p = [x, y, H[k] * UNIT];
-              const v = sub(L.position, p), d2 = dot(v, v), l = norm(v);
-              const wrap = Math.min(0.35, tanA * 0.6);
-              const ndl = Math.max(0, (nx[k] * l[0] + ny[k] * l[1] + nz[k] * l[2] + wrap) / (1 + wrap));
-              e = (ndl * coneFactor(L, sub(p, L.position)) * shutterFactor(L, p) * sh[k]) / d2;
-            } else {
-              const p = [x * (2.2 - zb) / 2.2, y, zb];
-              const v = sub(L.position, p), d2 = dot(v, v), l = norm(v);
-              e = (Math.max(0, l[2]) * coneFactor(L, sub(p, L.position)) * shutterFactor(L, p) / d2) * (wall ? 1 - 0.9 * wall[k] : 1);
-            }
-            R[k] += e * col[0]; G[k] += e * col[1]; B[k] += e * col[2];
-          }
-        }
-      }
-      const ex = exposureFor(state), wb = whiteBalanceGain(state);
+      const { mask } = field;
+      const { R, G, B, ex, wb, mat, amb } = light(state);
       for (let k = 0; k < N * N; k++) {
         // Shoulders (below the neck) wear the clothing colour.
         const a = !mask[k] ? mat.backdrop : Math.floor(k / N) > SHOULDER_ROW ? mat.clothing : mat.skin;

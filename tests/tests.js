@@ -353,6 +353,53 @@ await test("the snapshot PDF is a real one-page PDF", async () => {
   ok(text.slice(xref, xref + 4) === "xref", "xref offset points at the table");
 });
 
+// ---------- Classifier test suite (brief section 5.3) ----------
+const Mx = await import("../src/metrics/metrics.js");
+const { classify } = await import("../src/metrics/classify.js");
+const refMetrics = {};
+for (const n of ["p1_key", "p2_keyfill", "p3_three", "p4_highkey", "p5_lowkey", "p6_trap", "p7_whitebg_lowkey"]) {
+  const img = new Image(); img.src = "../docs/light-lab-reference/" + n + ".jpg"; await img.decode();
+  refMetrics[n] = Mx.referenceMetrics(img);
+}
+await test("reference p4 is high-key", () => ok(classify(refMetrics.p4_highkey).id === "high-key", JSON.stringify(refMetrics.p4_highkey)));
+await test("reference p5 is low-key", () => ok(classify(refMetrics.p5_lowkey).id === "low-key"));
+await test("reference p3 is balanced three-point", () => ok(classify(refMetrics.p3_three).id === "balanced"));
+await test("reference p6 (black backdrop) is balanced, NOT low-key", () => ok(classify(refMetrics.p6_trap).id === "balanced"));
+await test("reference p7 (white backdrop, one-sided light) is low-key, labelled as dramatic light on a bright backdrop", () => {
+  const c = classify(refMetrics.p7_whitebg_lowkey); ok(c.id === "low-key" && /bright backdrop/.test(c.note), JSON.stringify(c));
+});
+await test("references p1 and p2 are not high-key or low-key", () => {
+  ok(classify(refMetrics.p1_key).id === "balanced" && classify(refMetrics.p2_keyfill).id === "balanced");
+});
+await test("every reference shows the key on picture-left (camera-left), as rendered", () => {
+  for (const [n, m] of Object.entries(refMetrics)) ok(m.keySide === "left", n);
+});
+if (R) {
+  const p6 = PRESETS.threePoint.build(); p6.backdrop = { type: "black", brightness: 0.03, distance: 1.8 };
+  const p7 = PRESETS.lowKey.build(); p7.backdrop = { type: "white", brightness: 0.5, distance: 1.2 };
+  p7.lights.push(makeLight({ id: "bg", role: "backdrop", fixture: "s45-rgb", power: 1, kelvin: 3200 }));
+  for (const [name, s, want] of [["three-point preset", PRESETS.threePoint.build(), "balanced"], ["high-key preset", PRESETS.highKey.build(), "high-key"],
+    ["low-key preset", PRESETS.lowKey.build(), "low-key"], ["three-point on black paper (p6-style)", p6, "balanced"], ["low-key on lit white paper (p7-style)", p7, "low-key"]]) {
+    await test(`3D render: ${name} is ${want}`, () => { const m = R.measure(s); ok(classify(m).id === want, JSON.stringify(m)); });
+  }
+  await test("2D simple view classifies the presets the same way", () => {
+    const c2 = createFallbackRenderer(document.createElement("canvas"));
+    for (const [p, want] of [["threePoint", "balanced"], ["highKey", "high-key"], ["lowKey", "low-key"]]) ok(classify(c2.measure(PRESETS[p].build())).id === want, p);
+  });
+  await test("keySide follows the key: moving it camera-right flips the bright side", () => {
+    const s = PRESETS.threePoint.build(); s.lights[0].azimuthDeg = 45; s.lights[1].azimuthDeg = -40;
+    ok(R.measure(s).keySide === "right");
+  });
+  await test("rim score rises when the back light is on", () => {
+    const a = PRESETS.threePoint.build(); a.lights[2].on = false;
+    ok(R.measure(PRESETS.threePoint.build()).rimScore > R.measure(a).rimScore + 0.15);
+  });
+  await test("a warm halogen key reads as a warm colour cast at daylight white balance", () => {
+    const s = keyOnly({ fixture: "fresnel-650", modifier: "fresnel-lens", distance: 2.5 });
+    ok(R.measure(s).colorCast > 0.3, String(R.measure(s).colorCast));
+  });
+}
+
 // ---------- Report ----------
 const list = document.getElementById("list");
 let failed = 0;

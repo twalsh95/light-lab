@@ -6,6 +6,7 @@
 import { HEAD, UNIT, SKIN } from "../scene/head.js";
 import { resolveLights, exposureFor, materials, whiteBalanceGain, cameraSettings } from "../scene/lightmath.js";
 import { cameraGear, cameraView } from "../scene/gear.js";
+import { computeMetrics } from "../metrics/metrics.js";
 
 export const LEVELS = {
   low:    { scale: 0.5,  steps: 48, shadowSteps: 20 },
@@ -82,7 +83,7 @@ uniform vec3 uLPos[${MAX_LIGHTS}]; uniform vec3 uLDir[${MAX_LIGHTS}]; uniform ve
 uniform float uLSize[${MAX_LIGHTS}]; uniform vec2 uLCone[${MAX_LIGHTS}]; uniform int uLShadow[${MAX_LIGHTS}];
 uniform vec4 uLShut[${MAX_LIGHTS}]; uniform int uLGobo[${MAX_LIGHTS}];
 uniform float uBackZ; uniform vec3 uBackAlb; uniform float uAmbient; uniform vec3 uSkin; uniform vec3 uCloth;
-uniform float uExposure; uniform vec3 uWB;
+uniform float uExposure; uniform vec3 uWB; uniform float uRaw;
 
 const float UNIT = ${f4(UNIT)};
 float sdEllipsoid(vec3 p, vec3 c, vec3 r){ p -= c; float k0 = length(p / r); float k1 = length(p / (r * r)); return k0 * (k0 - 1.0) / k1; }
@@ -231,8 +232,23 @@ void main(){
     col = shade(ro + rd * tb, vec3(0.0, 0.0, 1.0), -rd, uBackAlb, 1.0, 0.0);
   }
   // Linear values shown directly, then clipped: the contrasty look of the reference renders.
-  outColor = vec4(clamp(col * uExposure * uWB, 0.0, 1.0), hit ? 1.0 : 0.0);   // alpha: 1 = subject (in focus)
+  // alpha: 1 = subject (in focus). uRaw: unclipped values for measuring (see measure()).
+  vec3 v = col * uExposure * uWB;
+  outColor = vec4(uRaw > 0.5 ? v : clamp(v, 0.0, 1.0), hit ? 1.0 : 0.0);
 }`;
+}
+
+// Where the face is in an n x n frame from this camera: the column of the nose line, the row
+// of the jaw, and how far either side of the nose the face reaches.
+export function facePixels(state, n) {
+  const cv = cameraView(state);
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const nrm = (a) => { const l = Math.hypot(...a); return a.map((x) => x / l); };
+  const fw = nrm(sub(cv.target, cv.position)), rt = nrm([-fw[2], 0, fw[0]]), up = [rt[1] * fw[2] - rt[2] * fw[1], rt[2] * fw[0] - rt[0] * fw[2], rt[0] * fw[1] - rt[1] * fw[0]];
+  const th = Math.tan((cv.fovDeg * Math.PI) / 360);
+  const project = (pw) => { const v = sub(pw, cv.position), z = dot(v, fw); return { x: (dot(v, rt) / (z * th) * 0.5 + 0.5) * n, y: (1 - (dot(v, up) / (z * th) * 0.5 + 0.5)) * n }; };
+  const nose = project([0, 0, 0.1]), jaw = project([0, -0.45 * UNIT, 0.08]), cheek = project([0.9 * HEAD.head.r[0] * UNIT, 0, 0.03]);
+  return { noseX: Math.round(nose.x), jawRow: Math.round(jaw.y), halfWidth: Math.abs(cheek.x - nose.x) };
 }
 
 // Throws a plain-language Error if this device can't run it.
@@ -328,8 +344,61 @@ export function createShaderRenderer(canvas) {
     gl.uniform1f(U.uFov, cv.fovDeg);
   }
 
+  // Measuring: the scene pass into a small unclipped (float) target, read back, with masks
+  // for the subject and face worked out from where the camera is.
+  const floatOK = !!gl.getExtension("EXT_color_buffer_float");
+  let mt = null;
+  function measureTarget(n) {
+    if (mt && mt.n === n) return mt;
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    if (floatOK) gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, n, n, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    else gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, n, n, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    const fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return (mt = { tex, fb, n });
+  }
+  function measure(state, n = 96) {
+    const { p, U, loc } = program("medium"), T = measureTarget(n);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, T.fb);
+    gl.viewport(0, 0, n, n);
+    gl.useProgram(p);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    upload(U, state, n, n);
+    // 8-bit fallback: measure a quarter as bright so highlights don't clip, then scale back.
+    const scale = floatOK ? 1 : 0.25;
+    gl.uniform1f(U.uExposure, exposureFor(state) * scale);
+    gl.uniform1f(U.uRaw, 1);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.uniform1f(U.uRaw, 0);
+    let px;
+    if (floatOK) { px = new Float32Array(n * n * 4); gl.readPixels(0, 0, n, n, gl.RGBA, gl.FLOAT, px); }
+    else { const b8 = new Uint8Array(n * n * 4); gl.readPixels(0, 0, n, n, gl.RGBA, gl.UNSIGNED_BYTE, b8); px = Float32Array.from(b8, (v) => v / 255); }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    // readPixels starts at the bottom row; flip to top-first.
+    const rgb = new Float32Array(n * n * 3), subject = new Uint8Array(n * n);
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const src = ((n - 1 - y) * n + x) * 4, k = y * n + x;
+      rgb[k * 3] = px[src] / scale; rgb[k * 3 + 1] = px[src + 1] / scale; rgb[k * 3 + 2] = px[src + 2] / scale;
+      subject[k] = px[src + 3] > 0.5 ? 1 : 0;
+    }
+    const geo = facePixels(state, n), face = new Uint8Array(n * n);
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const k = y * n + x;
+      if (subject[k] && y < geo.jawRow && Math.abs(x - geo.noseX) < geo.halfWidth) face[k] = 1;
+    }
+    return computeMetrics({ w: n, h: n, rgb, subject, face, noseX: geo.noseX });
+  }
+
   return {
     kind: "3d",
+    measure,
     get lost() { return lost || gl.isContextLost(); },
     warm(level) { program(level); },
     // Draws one frame. cssSize = the view's size on screen. Returns the time it took
