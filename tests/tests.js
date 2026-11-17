@@ -229,6 +229,19 @@ await test("the simple 2D view draws every preset without errors", () => {
   const c = document.createElement("canvas"), f = createFallbackRenderer(c);
   for (const p of Object.values(PRESETS)) f.render(p.build(), "low", 128);
 });
+await test("the 3D studio view draws every fixture, modifier and reflector without errors", async () => {
+  const { createStudio3D } = await import("../src/ui/studio3d.js");
+  const box = document.createElement("div"); box.style.width = "300px"; document.body.append(box);
+  const v = await createStudio3D(box, { onSelect() {} });
+  for (const p of Object.values(PRESETS)) v.update(p.build(), null);
+  const s = blankScene(); s.mode = "open";
+  for (const [fid, f] of Object.entries(gear().fixtures)) for (const m of f.modifiers) {
+    s.lights = [makeLight({ id: "x", fixture: fid, modifier: m, shutters: { top: 0.5, bottom: 0, camera: 0.3, backdrop: 0 } })];
+    s.reflectors = [makeReflector({ item: "flag-gold-silver", side: "gold" })];
+    v.update(s, "x");
+  }
+  v.dispose(); box.remove();
+});
 await test("the snapshot PDF is a real one-page PDF", async () => {
   const portrait = document.createElement("canvas"); portrait.width = portrait.height = 64;
   const blob = await snapshotPdf(composeSnapshot(PRESETS.threePoint.build(), portrait));

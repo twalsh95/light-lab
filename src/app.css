@@ -227,4 +227,12 @@ details.section[open] > summary::before { content: "▾"; }
 .row label, .rowlabel { text-decoration: underline dotted var(--line); text-underline-offset: 3px; }
 .row.check label, .row.text .rowlabel { text-decoration: none; cursor: default; }
 
+/* 3D studio view */
+button.seg.small { min-height: 30px; padding: 3px 9px; font-size: 13px; }
+.studio3d-wrap { position: relative; }
+.studio3d { display: block; width: 100%; border: 1.5px solid var(--line); background: #121318; touch-action: none; cursor: grab; }
+.studio3d:active { cursor: grabbing; }
+.studio3d-help { margin: 4px 0 0; font-size: 12px; }
+.studio3d-wrap[aria-busy="true"]::before { content: "Loading the 3D studio…"; display: block; padding: 40px 0; text-align: center; color: var(--muted); }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

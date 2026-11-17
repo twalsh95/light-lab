@@ -62,9 +62,18 @@
   </section>
 
   <section class="card map-card" aria-labelledby="mapTitle">
-    <div class="card-head"><h2 id="mapTitle">Studio from above</h2></div>
+    <div class="card-head">
+      <h2 id="mapTitle">The studio</h2>
+      <div class="group" role="radiogroup" aria-label="Studio view" id="viewToggle">
+        <button type="button" role="radio" data-view="map" class="seg small" aria-checked="true">From above</button>
+        <button type="button" role="radio" data-view="3d" class="seg small" aria-checked="false">3D studio</button>
+      </div>
+    </div>
     <div id="chips" class="chips" role="toolbar" aria-label="Lights"></div>
     <div id="map"></div>
+    <div id="studio3d" class="studio3d-wrap" hidden>
+      <p class="hint studio3d-help">Drag to look around. Scroll or pinch to zoom. Click a light to select it. Move lights on the map ("From above") or in the side view.</p>
+    </div>
     <div id="sideview" class="sideview"></div>
     <div id="studio" class="studio-add"></div>
     <details class="keys">

@@ -116,6 +116,32 @@ const side = createSideView($("sideview"), {
   onEndGroup: () => history.endGroup(),
 });
 
+// The studio card: top-down map or the 3D studio. The 3D view (and three.js) loads only
+// the first time someone opens it.
+const VIEW_KEY = "lightlab.studioView";
+let studio3d = null, studioView = "map";
+async function setStudioView(v) {
+  if (v === "3d" && !studio3d) {
+    $("studio3d").hidden = false;
+    $("studio3d").setAttribute("aria-busy", "true");
+    try {
+      const { createStudio3D } = await import("./ui/studio3d.js");
+      studio3d = await createStudio3D($("studio3d"), { onSelect: (id) => select(id) });
+    } catch (e) {
+      $("studio3d").hidden = true;
+      showError("The 3D studio view couldn't open on this device (" + e.message + "). The map from above still works.");
+      v = "map";
+    } finally { $("studio3d").removeAttribute("aria-busy"); }
+  }
+  studioView = v;
+  $("map").hidden = v !== "map";
+  $("studio3d").hidden = v !== "3d";
+  for (const b of document.querySelectorAll("#viewToggle [data-view]")) b.setAttribute("aria-checked", b.dataset.view === v ? "true" : "false");
+  store.set(VIEW_KEY, v);
+  refresh();
+}
+for (const b of document.querySelectorAll("#viewToggle [data-view]")) b.addEventListener("click", () => setStudioView(b.dataset.view));
+
 // Our room / Open studio, in the header.
 for (const b of document.querySelectorAll("#modeToggle [data-mode]")) {
   b.addEventListener("click", () => {
@@ -137,6 +163,7 @@ function refresh() {
   map.update(s, panels.selected);
   chips.update(s, panels.selected);
   side.update(s, panels.selected);
+  if (studio3d && studioView === "3d") studio3d.update(s, panels.selected);
   for (const b of document.querySelectorAll("#modeToggle [data-mode]")) b.setAttribute("aria-checked", b.dataset.mode === s.mode ? "true" : "false");
   $("undo").disabled = !history.canUndo();
   $("redo").disabled = !history.canRedo();
@@ -220,6 +247,7 @@ $("noticeOk").addEventListener("click", () => { $("notice").hidden = true; store
 // ---------- Go ----------
 panels.select(history.state.lights[0]?.id || null);
 refresh();
+if (store.get(VIEW_KEY) === "3d") setStudioView("3d");
 requestAnimationFrame(() => {
   try { if (renderer.kind === "3d") quality.calibrate(history.state, cssSize()); }
   catch (e) { useFallback(e.message); }
