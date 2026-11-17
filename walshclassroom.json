@@ -1,0 +1,11 @@
+{
+  "name": "Light Lab",
+  "kind": "Tool",
+  "icon": "camera",
+  "color": "#F2A93B",
+  "status": "beta",
+  "tags": ["Studio", "Photography", "Lighting"],
+  "tagline": "Place lights around a model and see the portrait change.",
+  "description": "A virtual lighting studio. Move key, fill, back and hair lights around a clay model, set the camera, and watch the portrait change. Practice three-point, high-key and low-key lighting before the real stations.",
+  "note": "Early build. No sign-in, and nothing is sent anywhere."
+}
