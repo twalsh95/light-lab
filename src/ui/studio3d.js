@@ -14,13 +14,13 @@ import { resolveLights, lightPosition, backdropLightPosition, materials, lightSp
 const FLOOR = -1.45;                         // face height above the floor, in metres
 const ROLE_COLORS = { key: "#f2a93b", fill: "#6cb4ec", back: "#ff7a72", hair: "#f08cd0", accent: "#7bd88f", backdrop: "#c9cdd6", reflector: "#e2b54a" };
 
-export async function createStudio3D(container, { onSelect }) {
+export async function createStudio3D(container, { onSelect, onMove = () => {}, onEndGroup = () => {} }) {
   const THREE = await import("../../vendor/three/build/three.module.js");
   const canvas = document.createElement("canvas");
   canvas.className = "studio3d";
   canvas.tabIndex = 0;
   canvas.setAttribute("role", "img");
-  canvas.setAttribute("aria-label", "3D view of the studio. Drag or use the arrow keys to look around; plus and minus zoom. Pick lights with the chips or the map.");
+  canvas.setAttribute("aria-label", "3D view of the studio. Arrow keys look around; plus and minus zoom; Home resets the view. With a mouse or touch: drag a light to move it, Shift-drag to raise or lower it, drag empty space to look around.");
   container.appendChild(canvas);
   let renderer;
   try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true }); }
@@ -49,7 +49,8 @@ export async function createStudio3D(container, { onSelect }) {
   scene.add(grid);
 
   // Backdrop: a sheet of seamless paper falling to the floor and curving forward.
-  const backdropMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, side: THREE.DoubleSide });
+  // Front side only: from behind, the paper is see-through, so "From behind" shows the set.
+  const backdropMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, side: THREE.FrontSide });
   const backdrop = new THREE.Group();
   const sheet = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 2.9), backdropMat);
   sheet.position.y = FLOOR + 1.45 + 0.3;
@@ -89,6 +90,7 @@ export async function createStudio3D(container, { onSelect }) {
   const pickables = [];
 
   function rebuildGear(s) {
+    lightsGroup.traverse((o) => { o.geometry?.dispose(); const m = o.material; if (m) { m.map?.dispose(); m.dispose(); } });
     lightsGroup.clear();
     pickables.length = 0;
     lightPool.forEach((l) => { scene.remove(l, l.target); l.dispose?.(); });
@@ -162,21 +164,94 @@ export async function createStudio3D(container, { onSelect }) {
     renderer.render(scene, cam);
   }
 
-  // ----- Looking around -----
-  let drag = null;
-  canvas.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, y: e.clientY, moved: 0 }; try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* fine */ } });
+  // ----- Looking around, and moving lights -----
+  // Drag empty space: walk around the set. Drag a light or reflector: slide it across the
+  // floor at the same height. Shift-drag a light: raise or lower it. Two fingers: zoom.
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  const pointers = new Map();
+  let drag = null, pinch = null;
+  const findObj = (id) => state && (state.lights.find((l) => l.id === id) || state.reflectors.find((r) => r.id === id));
+  const movable = (o) => o && o.role !== "backdrop";
+
+  function setRay(e) {
+    const r = canvas.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ndc, cam);
+  }
+  function hitId(e) {
+    setRay(e);
+    const hit = ray.intersectObjects(pickables, true)[0];
+    let o = hit?.object;
+    while (o && !o.userData.id) o = o.parent;
+    return o?.userData.id || null;
+  }
+  // Where the pointer meets the horizontal plane at height y (scene coordinates).
+  function onPlane(e, y) {
+    setRay(e);
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -y), out = new THREE.Vector3();
+    return ray.ray.intersectPlane(plane, out) ? out : null;
+  }
+
+  canvas.addEventListener("pointerdown", (e) => {
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* fine */ }
+    if (pointers.size === 2) {                       // second finger: start pinching
+      const [a, b] = [...pointers.values()];
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), r: view.radius };
+      drag = null;
+      return;
+    }
+    const id = hitId(e), o = findObj(id);
+    if (id) onSelect(id);
+    drag = movable(o)
+      ? { mode: e.shiftKey ? "lift" : "move", id, x: e.clientX, y: e.clientY, moved: 0, height: lightPosition(o)[1] }
+      : { mode: "orbit", x: e.clientX, y: e.clientY, moved: 0 };
+  });
   canvas.addEventListener("pointermove", (e) => {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y);
+      autoFit = false;
+      view.radius = Math.max(2.2, Math.min(12, pinch.r * (pinch.d / Math.max(20, d))));
+      render();
+      return;
+    }
     if (!drag) return;
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
-    view.yaw -= dx * 0.008; view.pitch = Math.max(0.02, Math.min(1.45, view.pitch + dy * 0.006));
-    if (drag.moved > 5) autoFit = false;
-    render();
+    if (drag.mode === "orbit") {
+      view.yaw -= dx * 0.008; view.pitch = Math.max(0.02, Math.min(1.45, view.pitch + dy * 0.006));
+      if (drag.moved > 5) autoFit = false;
+      render();
+    } else if (drag.mode === "move") {
+      const p = onPlane(e, drag.height);
+      if (!p) return;
+      const h = Math.max(0.3, Math.min(4, Math.hypot(p.x, p.z)));
+      onMove(drag.id, place(Math.atan2(p.x, p.z), h, drag.height), "drag3d-" + drag.id);
+    } else {
+      // Raise or lower: about 1 m per 200 px, keeping the same spot on the floor.
+      const o = findObj(drag.id);
+      const pos = lightPosition(o), h = Math.max(0.3, Math.hypot(pos[0], pos[2]));
+      drag.height = Math.max(FLOOR + 0.3, Math.min(2.2, drag.height - dy * 0.005));
+      onMove(drag.id, place(Math.atan2(pos[0], pos[2]), h, drag.height), "lift3d-" + drag.id);
+    }
   });
-  canvas.addEventListener("pointerup", (e) => {
-    if (drag && drag.moved < 5) pick(e);
+  const release = (e) => {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinch = null;
+    if (drag && drag.mode !== "orbit" && drag.moved > 0) onEndGroup();
     drag = null;
-  });
+  };
+  canvas.addEventListener("pointerup", release);
+  canvas.addEventListener("pointercancel", release);
+  // Azimuth (radians), horizontal distance and height -> the app's light controls.
+  function place(az, horiz, height) {
+    const distance = Math.max(0.4, Math.min(4, Math.hypot(horiz, height)));
+    const elevationDeg = Math.max(-30, Math.min(75, (Math.atan2(height, horiz) * 180) / Math.PI));
+    return { azimuthDeg: Math.round((az * 180) / Math.PI), elevationDeg: Math.round(elevationDeg), distance: Math.round(distance * 100) / 100 };
+  }
+
   canvas.addEventListener("wheel", (e) => { e.preventDefault(); zoom(e.deltaY > 0 ? 1.1 : 1 / 1.1); }, { passive: false });
   canvas.addEventListener("keydown", (e) => {
     const k = { ArrowLeft: () => (view.yaw += 0.12), ArrowRight: () => (view.yaw -= 0.12), ArrowUp: () => (view.pitch = Math.min(1.45, view.pitch + 0.08)),
@@ -184,31 +259,51 @@ export async function createStudio3D(container, { onSelect }) {
     if (k) { e.preventDefault(); if (e.key !== "Home") autoFit = false; k(); render(); }
   });
   function zoom(f) { autoFit = false; view.radius = Math.max(2.2, Math.min(12, view.radius * f)); render(); }
+
+  // ----- Framing -----
   // Until the student moves the view themselves, zoom out far enough to show every light.
   let autoFit = true;
-  function reset() { view.yaw = 0.2; view.pitch = 0.62; autoFit = true; fit(); }
-  function fit() {
-    if (!autoFit || !state) return;
+  function fitted() {
     let far = 1.6, sumX = 0, n = 0;
-    for (const o of [...state.lights.filter((l) => l.role !== "backdrop"), ...state.reflectors]) {
+    for (const o of state ? [...state.lights.filter((l) => l.role !== "backdrop"), ...state.reflectors] : []) {
       const p = lightPosition(o); far = Math.max(far, Math.hypot(p[0], p[2]), p[1] + 0.5);
       sumX += p[0]; n++;
     }
-    // Look a little toward where the lights are, and back off far enough to see them all.
-    view.target.x = n ? Math.max(-1, Math.min(1, (sumX / n) * 0.5)) : 0;
-    view.radius = Math.max(5.6, Math.min(12, 2.6 + far * 2.5));
+    return { x: n ? Math.max(-1, Math.min(1, (sumX / n) * 0.5)) : 0, radius: Math.max(5.6, Math.min(12, 2.6 + far * 2.5)), far };
   }
-  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
-  function pick(e) {
-    const r = canvas.getBoundingClientRect();
-    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-    ray.setFromCamera(ndc, cam);
-    const hit = ray.intersectObjects(pickables, true)[0];
-    if (!hit) return;
-    let o = hit.object;
-    while (o && !o.userData.id) o = o.parent;
-    if (o) onSelect(o.userData.id);
+  function fit() {
+    if (!autoFit || !state) return;
+    const f = fitted();
+    view.target.x = f.x; view.radius = f.radius;
   }
+  function reset() { view.yaw = 0.2; view.pitch = 0.62; view.target.set(0, -0.4, -0.25); autoFit = true; fit(); }
+  // Quick views. Each keeps every light in frame.
+  const VIEWS = {
+    camera: { label: "From the camera", yaw: 0.16, pitch: 0.2, scale: 1.0 },   // just over the camera's shoulder
+    above: { label: "From above", yaw: 0, pitch: 1.45, scale: 1.05 },
+    side: { label: "From the side", yaw: Math.PI / 2, pitch: 0.1, scale: 1.0 },
+    behind: { label: "From behind", yaw: Math.PI, pitch: 0.3, scale: 1.0 },
+  };
+  function goTo(name) {
+    if (name === "reset") { reset(); render(); return; }
+    const v = VIEWS[name], f = fitted();
+    autoFit = false;
+    view.yaw = v.yaw; view.pitch = v.pitch;
+    view.target.set(name === "side" || name === "behind" ? 0 : f.x, -0.35, name === "above" ? 0 : -0.2);
+    view.radius = Math.max(4.5, Math.min(12, f.radius * v.scale));
+    render();
+  }
+  const bar = document.createElement("div");
+  bar.className = "views3d";
+  bar.setAttribute("role", "toolbar");
+  bar.setAttribute("aria-label", "Quick views");
+  for (const [k, label] of [...Object.entries(VIEWS).map(([k, v]) => [k, v.label]), ["reset", "Reset"]]) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = label; b.dataset.view3d = k;
+    b.addEventListener("click", () => goTo(k));
+    bar.appendChild(b);
+  }
+  container.insertBefore(bar, canvas);
 
   return {
     canvas,
@@ -222,6 +317,13 @@ export async function createStudio3D(container, { onSelect }) {
       render();
     },
     resetView() { reset(); render(); },
+    goTo,
+    // Where a light appears on screen (page coordinates); used by the tests.
+    project(id) {
+      const o = findObj(id); if (!o) return null;
+      const v = new THREE.Vector3(...lightPosition(o)).project(cam), r = canvas.getBoundingClientRect();
+      return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
+    },
     dispose() { renderer.dispose(); canvas.remove(); },
   };
 

@@ -126,7 +126,15 @@ async function setStudioView(v) {
     $("studio3d").setAttribute("aria-busy", "true");
     try {
       const { createStudio3D } = await import("./ui/studio3d.js");
-      studio3d = await createStudio3D($("studio3d"), { onSelect: (id) => select(id) });
+      studio3d = await createStudio3D($("studio3d"), {
+        onSelect: (id) => select(id),
+        // Dragging in 3D sets the same three controls as the map and side view.
+        onMove: (id, { azimuthDeg, elevationDeg, distance }, group) => history.change((s) => {
+          const o = findAny(s, id);
+          if (o) Object.assign(o, { azimuthDeg, elevationDeg, distance });
+        }, group),
+        onEndGroup: () => history.endGroup(),
+      });
     } catch (e) {
       $("studio3d").hidden = true;
       showError("The 3D studio view couldn't open on this device (" + e.message + "). The map from above still works.");
@@ -257,3 +265,4 @@ requestAnimationFrame(() => {
 window.addEventListener("resize", () => { dirty = true; });
 
 export { history, panels };
+export const getStudio3d = () => studio3d;   // for the tests
