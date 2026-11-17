@@ -3,7 +3,7 @@
 // support it: the backdrop is a clue, not the answer.
 //
 // Thresholds, calibrated on Tom's 7 reference renders and on the app's own presets
-// (docs/PHASE4_CLASSIFIER.md has the numbers). PENDING TOM'S APPROVAL.
+// (docs/PHASE4_CLASSIFIER.md has the numbers). Approved by Tom, Nov 17 2026.
 export const THRESHOLDS = {
   highKeyMaxStops: 0.4,      // shadow side within 0.4 stop of the lit side (fill nearly matches key)
   highKeyMinBackdrop: 0.6,   // and a bright backdrop...

@@ -1,8 +1,8 @@
-# Setup classifier: proposed thresholds (needs Tom's approval)
+# Setup classifier thresholds (approved by Tom, Nov 17 2026)
 
 The classifier names a portrait **high-key**, **low-key** or **balanced three-point** (brief section 5.3). It decides mainly on **shadows**. Backdrop and overall brightness only support a high-key call: the backdrop is a clue, not the answer. Thresholds live in `src/metrics/classify.js`.
 
-## Proposed thresholds
+## Thresholds
 
 | Call | Rule |
 |---|---|

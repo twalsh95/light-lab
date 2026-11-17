@@ -14,7 +14,7 @@ Live at **walshclassroom.com/light-lab/**. No sign-in, and nothing is sent anywh
 | 1 | Rendering spike | Done: renderer B chosen (`docs/PHASE1_SPIKE_RESULTS.md`, test page in `spike/`) |
 | 2 | Core sandbox | Approved Nov 16 2026 |
 | 3 | Gear and modifiers | Approved Nov 16 2026 (`docs/PHASE3_GEAR_NOTES.md`: remaining estimates, gobo set still to match) |
-| 4 | UI pass (first), then the learning layer | UI pass approved. Learning layer built: classifier thresholds (`docs/PHASE4_CLASSIFIER.md`) and all content are drafts waiting for Tom's approval |
+| 4 | UI pass (first), then the learning layer | Approved Nov 17 2026: UI pass, learning layer, classifier thresholds (`docs/PHASE4_CLASSIFIER.md`) and content |
 | 5+ | Accounts, class mode, … | Not started |
 
 ## Using it

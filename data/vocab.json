@@ -1,7 +1,7 @@
 {
   "version": 1,
   "notes": [
-    "Plain definitions shown as tips wherever the word appears. Terms marked \"from\": \"brief\" are Tom's own definitions (Light Lab brief, section 2). Terms marked \"draft\": true were written for the app and need Tom's review."
+    "Plain definitions shown as tips wherever the word appears. Terms marked \"from\": \"brief\" are Tom's own definitions (Light Lab brief, section 2). Terms written for the app were approved by Tom on Nov 17 2026."
   ],
   "terms": {
     "key light":         { "def": "The main light. The brightest. Sets the direction of the shadows.", "from": "brief", "also": ["key"] },
@@ -15,23 +15,23 @@
     "soft light":        { "def": "Big, close light gives soft shadows. Small, far light gives hard shadows.", "from": "brief", "also": ["hard light", "soft", "hard"] },
     "falloff":           { "def": "Light gets weaker as it moves farther from the subject.", "from": "brief" },
     "color temperature": { "def": "How warm (orange) or cool (blue) a light is.", "from": "brief", "also": ["colour temperature", "warm", "cool", "kelvin"] },
-    "three-point":       { "def": "The classic setup: a key light, a fill light and a back light.", "draft": true, "also": ["three-point lighting", "balanced three-point"] },
-    "softbox":           { "def": "A fabric box over a light that makes it bigger and softer.", "draft": true },
-    "umbrella":          { "def": "Light shot through or bounced off an umbrella: a big, soft source.", "draft": true },
-    "snoot":             { "def": "A tube on a light that makes a small, tight spot.", "draft": true },
-    "gel":               { "def": "A sheet of coloured plastic in front of a light that changes its colour.", "draft": true },
-    "gobo":              { "def": "A metal cut-out in front of a light that projects a pattern, like a window or blinds.", "draft": true },
-    "barn doors":        { "def": "Metal flaps on a light that fold in to cut light off one side of the beam.", "draft": true },
-    "flag":              { "def": "A black card that blocks light from where you don't want it.", "draft": true },
-    "reflector":         { "def": "A white, silver or gold card that bounces light back onto the subject.", "draft": true },
-    "feathering":        { "def": "Turning a light so only the soft edge of its beam reaches the subject.", "draft": true, "also": ["feather"] },
-    "lighting ratio":    { "def": "How much brighter the lit side is than the shadow side. 2:1 is soft; 8:1 is dramatic.", "draft": true, "also": ["ratio"] },
-    "stop":              { "def": "One stop is double (or half) the light. 2 stops = 4 times, 3 stops = 8 times.", "draft": true, "also": ["stops"] },
-    "aperture":          { "def": "How wide the lens opens. A small f-number (f/1.8) lets in more light and blurs the backdrop more.", "draft": true, "also": ["f-number", "f-stop"] },
-    "shutter speed":     { "def": "How long the camera takes in light. Longer (1/30) is brighter than shorter (1/500).", "draft": true, "also": ["shutter"] },
-    "ISO":               { "def": "How sensitive the camera is. Higher ISO is brighter but adds grain.", "draft": true },
-    "white balance":     { "def": "What the camera treats as white. Lights warmer than it look orange; cooler ones look blue.", "draft": true },
-    "depth of field":    { "def": "How much of the picture is sharp from front to back. Wide apertures make it shallow, so the backdrop blurs.", "draft": true },
-    "exposure":          { "def": "How bright the camera makes the picture, set by aperture, shutter speed and ISO.", "draft": true, "also": ["exposed"] }
+    "three-point":       { "def": "The classic setup: a key light, a fill light and a back light.", "approved": "2026-11-17", "also": ["three-point lighting", "balanced three-point"] },
+    "softbox":           { "def": "A fabric box over a light that makes it bigger and softer.", "approved": "2026-11-17" },
+    "umbrella":          { "def": "Light shot through or bounced off an umbrella: a big, soft source.", "approved": "2026-11-17" },
+    "snoot":             { "def": "A tube on a light that makes a small, tight spot.", "approved": "2026-11-17" },
+    "gel":               { "def": "A sheet of coloured plastic in front of a light that changes its colour.", "approved": "2026-11-17" },
+    "gobo":              { "def": "A metal cut-out in front of a light that projects a pattern, like a window or blinds.", "approved": "2026-11-17" },
+    "barn doors":        { "def": "Metal flaps on a light that fold in to cut light off one side of the beam.", "approved": "2026-11-17" },
+    "flag":              { "def": "A black card that blocks light from where you don't want it.", "approved": "2026-11-17" },
+    "reflector":         { "def": "A white, silver or gold card that bounces light back onto the subject.", "approved": "2026-11-17" },
+    "feathering":        { "def": "Turning a light so only the soft edge of its beam reaches the subject.", "approved": "2026-11-17", "also": ["feather"] },
+    "lighting ratio":    { "def": "How much brighter the lit side is than the shadow side. 2:1 is soft; 8:1 is dramatic.", "approved": "2026-11-17", "also": ["ratio"] },
+    "stop":              { "def": "One stop is double (or half) the light. 2 stops = 4 times, 3 stops = 8 times.", "approved": "2026-11-17", "also": ["stops"] },
+    "aperture":          { "def": "How wide the lens opens. A small f-number (f/1.8) lets in more light and blurs the backdrop more.", "approved": "2026-11-17", "also": ["f-number", "f-stop"] },
+    "shutter speed":     { "def": "How long the camera takes in light. Longer (1/30) is brighter than shorter (1/500).", "approved": "2026-11-17", "also": ["shutter"] },
+    "ISO":               { "def": "How sensitive the camera is. Higher ISO is brighter but adds grain.", "approved": "2026-11-17" },
+    "white balance":     { "def": "What the camera treats as white. Lights warmer than it look orange; cooler ones look blue.", "approved": "2026-11-17" },
+    "depth of field":    { "def": "How much of the picture is sharp from front to back. Wide apertures make it shallow, so the backdrop blurs.", "approved": "2026-11-17" },
+    "exposure":          { "def": "How bright the camera makes the picture, set by aperture, shutter speed and ISO.", "approved": "2026-11-17", "also": ["exposed"] }
   }
 }

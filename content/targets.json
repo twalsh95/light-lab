@@ -1,8 +1,8 @@
 {
   "type": "targets",
-  "note": "Match the look targets. Each target is a hidden setup; its numbers are measured from it when the student opens it, so they always match the target picture. Scoring compares measured properties, never pixels. Drafts until Tom approves.",
+  "note": "Match the look targets. Each target is a hidden setup; its numbers are measured from it when the student opens it, so they always match the target picture. Scoring compares measured properties, never pixels. Approved by Tom Nov 17 2026.",
   "items": [
-    { "id": "mysterious-album-cover", "status": "draft", "title": "Mysterious album cover", "difficulty": 2, "concept": "styles",
+    { "id": "mysterious-album-cover", "status": "approved", "title": "Mysterious album cover", "difficulty": 2, "concept": "styles",
       "brief": "A musician wants a dark, mysterious cover: one side of the face in deep shadow, background nearly black.",
       "targetScene": { "preset": "lowKey" },
       "metrics": {
@@ -12,7 +12,7 @@
       },
       "hints": ["The target uses only one light.", "The key is far to the side, almost 90°.", "Look at the backdrop: very dark."],
       "careerConnection": { "title": "Album cover photographer", "text": "Music photographers light for mood first. A low-key cover can say more about a sound than the musician's face does. Art directors often ask for exactly this look, and you have to deliver it on set, fast." } },
-    { "id": "bright-yearbook", "status": "draft", "title": "Bright yearbook portrait", "difficulty": 1, "concept": "styles",
+    { "id": "bright-yearbook", "status": "approved", "title": "Bright yearbook portrait", "difficulty": 1, "concept": "styles",
       "brief": "School portraits need a bright, friendly look: soft even light and a white background.",
       "targetScene": { "preset": "highKey" },
       "metrics": {
@@ -22,7 +22,7 @@
       },
       "hints": ["Two big, soft lights at the front.", "The backdrop has its own light.", "Try +½ stop of exposure compensation."],
       "careerConnection": { "title": "School and event photographer", "text": "School photographers set up one look and repeat it for hundreds of students in a day, so the setup has to be even, flattering, and quick to check." } },
-    { "id": "actor-headshot", "status": "draft", "title": "Actor's headshot", "difficulty": 2, "concept": "roles",
+    { "id": "actor-headshot", "status": "approved", "title": "Actor's headshot", "difficulty": 2, "concept": "roles",
       "brief": "An actor needs a classic headshot: clear key side, gentle fill, and a rim light so they stand out from a grey background.",
       "targetScene": { "preset": "threePoint" },
       "metrics": {
@@ -33,7 +33,7 @@
       },
       "hints": ["Three lights: key, fill and back.", "The key is about 45° camera-left and above the face.", "The backdrop is white paper, quite far back."],
       "careerConnection": { "title": "Headshot photographer", "text": "Casting directors look at hundreds of headshots, so actors need a clear, honest, well-lit picture. Headshot photographers often shoot three-point setups all day and adjust the fill to each face." } },
-    { "id": "film-noir", "status": "draft", "title": "Film noir detective", "difficulty": 3, "concept": "styles",
+    { "id": "film-noir", "status": "approved", "title": "Film noir detective", "difficulty": 3, "concept": "styles",
       "brief": "A 1940s-style crime poster: hard light from the camera's right side, deep shadows, dark background.",
       "targetScene": { "preset": "lowKey", "lights": { "key": { "azimuthDeg": 70, "flood": 0.3 } } },
       "metrics": {
@@ -43,7 +43,7 @@
       },
       "hints": ["One hard light.", "It's on the camera-right side this time.", "A Fresnel close to spot gives hard light."],
       "careerConnection": { "title": "Cinematographer (director of photography)", "text": "Cinematographers design the lighting for every shot of a film. Film noir is a style built almost entirely from hard, low-key light, and it's still copied in crime dramas and music videos." } },
-    { "id": "warm-interview", "status": "draft", "title": "Warm documentary interview", "difficulty": 3, "concept": "color",
+    { "id": "warm-interview", "status": "approved", "title": "Warm documentary interview", "difficulty": 3, "concept": "color",
       "brief": "A documentary wants a warm, cosy interview look: the face glowing a little orange, soft shadows.",
       "targetScene": { "preset": "threePoint", "lights": { "key": { "kelvin": 3200 }, "fill": { "kelvin": 3500 } } },
       "metrics": {
