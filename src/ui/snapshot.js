@@ -1,7 +1,7 @@
 // Snapshot: the portrait, the lighting diagram and the settings on one page, saved as a
 // PNG or a one-page PDF (for Google Classroom). Made entirely in the browser.
 import { ROLES } from "../scene/schema.js";
-import { gear, fixture, modifier, reflectorItem } from "../scene/gear.js";
+import { gear, fixture, modifier, reflectorItem, cameraGear, cameraView } from "../scene/gear.js";
 import { lightSpec, mapPoint, backdropLightPosition, lightAim, lightPosition, cameraSettings } from "../scene/lightmath.js";
 import { apertureLabel, shutterLabel } from "../scene/camera.js";
 import { SHAPE_PATHS, MAP_VIEW } from "./map.js";
@@ -40,7 +40,9 @@ export function settingsLines(s) {
   lines.push(`Backdrop: ${bd}, ${s.backdrop.distance.toFixed(1)} m behind the subject`);
   lines.push(`Subject: ${G.skins[s.subject.skin].name.toLowerCase()} skin, ${G.clothing[s.subject.clothing].name.toLowerCase()}`);
   const cs = cameraSettings(s);
-  lines.push(`Camera: ${s.camera.mode === "manual" ? "Manual" : "Auto"}, ${apertureLabel(cs.aperture)}, ${shutterLabel(cs.shutter)} s, ISO ${cs.iso}` +
+  const cg = cameraGear(s);
+  lines.push(`Camera: ${cg.body.name}, ${cg.lens.name}${cg.lens.focal[1] > cg.lens.focal[0] ? ` at ${cg.focal} mm` : ""}, ${cameraView(s).distance.toFixed(1)} m from the subject`);
+  lines.push(`Exposure: ${s.camera.mode === "manual" ? "Manual" : "Auto"}, ${apertureLabel(cs.aperture, cg.lens.tStop)}, ${shutterLabel(cs.shutter)} s, ISO ${cs.iso}` +
     `${s.camera.mode !== "manual" && s.camera.evCompensation ? `, ${s.camera.evCompensation > 0 ? "+" : ""}${Math.round(s.camera.evCompensation * 10) / 10} EV` : ""}, ${s.camera.whiteBalance} white balance`);
   return lines;
 }

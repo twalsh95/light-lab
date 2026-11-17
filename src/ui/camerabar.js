@@ -2,7 +2,7 @@
 // scale like the one in a camera's viewfinder.
 //   Auto: the camera picks all three (shown greyed). Exposure compensation brightens or darkens.
 //   Manual: the student picks all three; the meter shows how far from "correct" they are.
-import { APERTURES, SHUTTERS, ISOS, apertureLabel, shutterLabel, isoLabel, meterStops } from "../scene/camera.js";
+import { SHUTTERS, ISOS, apertureLabel, shutterLabel, isoLabel, meterStops, aperturesFor } from "../scene/camera.js";
 import { cameraSettings, meterFace } from "../scene/lightmath.js";
 import { cameraGear } from "../scene/gear.js";
 import { h } from "./panels.js";
@@ -39,12 +39,12 @@ export function createCameraBar(el, history, { announce }) {
 
   let listSig = "";
   function fillLists(s) {
-    const { body, lens } = cameraGear(s);
-    const sig = s.camera.body + s.camera.lens;
+    const { body, lens, focal } = cameraGear(s);
+    const sig = s.camera.body + s.camera.lens + focal;
     if (sig === listSig) return;
     listSig = sig;
     const fill = (sel, values, label) => { sel.innerHTML = ""; for (const v of values) sel.append(h("option", { value: String(v) }, label(v))); };
-    fill(ap.sel, APERTURES.filter((a) => a >= lens.aperture[0] && a <= lens.aperture[1]), apertureLabel);
+    fill(ap.sel, aperturesFor(lens, focal), (a) => apertureLabel(a, lens.tStop));
     fill(sh.sel, SHUTTERS.filter((t) => t <= body.shutter[0] && t >= body.shutter[1]), shutterLabel);
     fill(iso.sel, ISOS.filter((i) => i >= body.iso[0] && i <= body.iso[1]), isoLabel);
   }
@@ -80,7 +80,8 @@ export function createCameraBar(el, history, { announce }) {
       meter.classList.toggle("off-scale", Math.abs(stops) > 3);
       const word = Math.abs(stops) < 1 / 6 ? "correct exposure" : stops > 0 ? "brighter than the meter says" : "darker than the meter says";
       const label = Math.abs(stops) < 1 / 6 ? "0" : thirds(Math.max(-9, Math.min(9, stops)));
-      let note = `${apertureLabel(cur.aperture)}, ${shutterLabel(cur.shutter)} s, ISO ${cur.iso}. Meter: ${label} (${word}).`;
+      const g = cameraGear(s);
+      let note = `${apertureLabel(cur.aperture, g.lens.tStop)}, ${shutterLabel(cur.shutter)} s, ISO ${cur.iso}. Meter: ${label} (${word}).`;
       if (!manual && stops < -0.5 - Math.abs(evv) && stops < evv - 0.4) note += " Too dark for Auto: add light, or use Manual with a slower shutter or higher ISO.";
       meterText.textContent = note;
       meter.setAttribute("aria-label", `Light meter: ${label} stops, ${word}`);

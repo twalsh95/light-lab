@@ -9,7 +9,7 @@
 import { HEAD, UNIT, featureHeight } from "../scene/head.js";
 import { drawBeamMask, plainBeam } from "../render/beammask.js";
 import { ROLES } from "../scene/schema.js";
-import { fixture, modifier, reflectorItem } from "../scene/gear.js";
+import { fixture, modifier, reflectorItem, cameraView } from "../scene/gear.js";
 import { resolveLights, lightPosition, backdropLightPosition, lightAim, materials, lightSpec, sub, add, norm, scale } from "../scene/lightmath.js";
 
 const FLOOR = -1.45;                         // face height above the floor, in metres
@@ -84,9 +84,12 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
   const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.12, 20), new THREE.MeshStandardMaterial({ color: 0x0e0f12 }));
   lens.rotation.x = Math.PI / 2; lens.position.z = -0.09;
   camGroup.add(body, lens);
-  camGroup.position.set(0, -0.03, 2.2);
-  scene.add(camGroup, stand(THREE, 0, FLOOR, 2.2, 1.42 - 0.05, 0x2f3137));
-  scene.add(label(THREE, "Camera", "#b8bcc6", 0, 0.18, 2.2, 0.36));
+  // The camera rig (body, tripod, tag) moves to wherever the lens needs it.
+  const camRig = new THREE.Group();
+  camRig.add(camGroup, stand(THREE, 0, FLOOR, 0, 1.42 - 0.05, 0x2f3137), label(THREE, "Camera", "#b8bcc6", 0, 0.18, 0, 0.36));
+  camGroup.position.set(0, -0.03, 0);
+  camRig.position.z = 2.2;
+  scene.add(camRig);
 
   // Studio lights that actually light the subject in this view (so it looks lit).
   const lightPool = [];
@@ -168,6 +171,7 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
       }
     });
     s.lights.forEach((l, i) => { if (!l.on && lightPool[i]) lightPool[i].intensity = 0; });
+    camRig.position.z = cameraView(s).distance;
     const mat = materials(s);
     backdropMat.color.setRGB(...mat.backdrop, THREE.LinearSRGBColorSpace);
     backdrop.position.z = -s.backdrop.distance;

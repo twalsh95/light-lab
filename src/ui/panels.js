@@ -2,7 +2,7 @@
 // Subject, Backdrop and Camera. Every number has a slider and a number box, so students
 // can drag or type: the same goal, different means.
 import { ROLES, SIDES, LIMITS, makeLight, makeReflector, newId } from "../scene/schema.js";
-import { gear, fixture, modifier, reflectorItem, inventory, inventoryProblems, remaining, cameras } from "../scene/gear.js";
+import { gear, fixture, modifier, reflectorItem, inventory, inventoryProblems, remaining, cameras, cameraGear, cameraView, lensesFor } from "../scene/gear.js";
 import { lightSpec, sceneWarnings } from "../scene/lightmath.js";
 
 let uid = 0;
@@ -293,15 +293,46 @@ export function createPanels(els, history, { onSelect, announce }) {
   els.backdrop.append(bdRow, bdBright.row, bdDist.row, h("p", { class: "hint" }, "To light the backdrop itself, add a light with the role Backdrop light."));
 
   // Aperture, shutter, ISO and Auto/Manual live in the camera bar under the portrait.
+  // Camera body, lens (only lenses that fit the body's mount) and focal length for zooms.
   const bodyRow = selectRow({ key: "body", label: "Camera", options: Object.entries(cameras().bodies).map(([k, v]) => [k, v.name]),
-    get: (s) => s.camera.body, set: (v) => change((s) => { s.camera.body = v; }) });
-  const lensRow = selectRow({ key: "lens", label: "Lens", options: Object.entries(cameras().lenses).map(([k, v]) => [k, v.name]),
-    hint: "The lens sets how much the backdrop blurs at a given aperture. The framing stays head and shoulders.",
-    get: (s) => s.camera.lens, set: (v) => change((s) => { s.camera.lens = v; }) });
+    get: (s) => s.camera.body,
+    set: (v) => change((s) => {
+      s.camera.body = v;
+      const fits = lensesFor(v);
+      if (!fits.some(([k]) => k === s.camera.lens)) { const [k, l] = fits.find(([kk]) => kk === "sony-dt-35" || kk === "meike-85") || fits[0]; s.camera.lens = k; s.camera.focalMm = l.focal[0]; }
+    }) });
+  const lensSel = h("select", { id: "lensSel", "data-key": "lens", onchange: () => change((s) => { s.camera.lens = lensSel.value; s.camera.focalMm = cameras().lenses[lensSel.value].focal[0]; }) });
+  const lensRow = { row: h("div", { class: "row select" }, h("label", { for: "lensSel" }, "Lens"), lensSel,
+    h("p", { class: "hint" }, "Only lenses that fit this camera's mount are listed. Longer lenses stand farther back, flatten the face a little, and blur the backdrop more.")) };
+  const focalWrap = h("div");
+  let lensSig = "", focalRow = null;
+  const distNote = h("p", { class: "hint cam-dist" });
+  function updateLens(s) {
+    const { lens, focal, crop } = cameraGear(s);
+    const sig = s.camera.body + "|" + s.camera.lens;
+    if (sig !== lensSig) {
+      lensSig = sig;
+      lensSel.innerHTML = "";
+      for (const [k, l] of lensesFor(s.camera.body)) lensSel.append(h("option", { value: k }, l.name));
+      focalWrap.innerHTML = "";
+      focalRow = null;
+      if (lens.focal[1] > lens.focal[0]) {
+        focalRow = numberRow({ key: "focal", label: "Zoom", hint: "Focal length. Zooming in (bigger number) means the camera stands farther back to keep the same framing.",
+          min: lens.focal[0], max: lens.focal[1], step: 1, unit: "mm", get: (st) => cameraGear(st).focal,
+          set: grouped((st, v) => { st.camera.focalMm = Math.round(v); }, "focal") });
+        focalWrap.append(focalRow.row);
+      }
+    }
+    lensSel.value = s.camera.lens;
+    focalRow?.update(s);
+    const v = cameraView(s);
+    distNote.textContent = `${focal} mm${crop ? " (APS-C crop mode)" : ""}: the camera stands ${v.distance.toFixed(1)} m from the subject` +
+      (v.distance <= 0.46 ? ", as close as it can get, so the framing is wider." : v.distance >= 7.99 ? ", as far back as the room allows." : ".");
+  }
   const wb = selectRow({ key: "wb", label: "White balance", options: [["daylight", "Daylight (5600 K)"], ["tungsten", "Tungsten (3200 K)"], ["auto", "Auto (match the key light)"]],
     hint: "What the camera treats as white. Lights warmer than this look orange; cooler ones look blue.",
     get: (s) => s.camera.whiteBalance, set: (v) => change((s) => { s.camera.whiteBalance = v; }) });
-  els.camera.append(bodyRow.row, lensRow.row, wb.row);
+  els.camera.append(bodyRow.row, lensRow.row, focalWrap, distNote, wb.row);
 
   return {
     get selected() { return selected; },
@@ -332,7 +363,7 @@ export function createPanels(els, history, { onSelect, announce }) {
       bdType.value = s.backdrop.type;
       bdBright.row.hidden = s.backdrop.type !== "custom";
       bdBright.update(s); bdDist.update(s);
-      bodyRow.update(s); lensRow.update(s); wb.update(s);
+      bodyRow.update(s); updateLens(s); wb.update(s);
     },
   };
 }

@@ -13,9 +13,32 @@ export function cameras() {
   if (!CAMERAS) throw new Error("Camera list not loaded yet.");
   return CAMERAS;
 }
+// The body and lens in use, the focal length (zooms), and the sensor height actually used:
+// an APS-C lens on a full-frame body switches the camera to its APS-C crop.
 export function cameraGear(state) {
   const C = cameras();
-  return { body: C.bodies[state.camera.body] || C.bodies[C.default.body], lens: C.lenses[state.camera.lens] || C.lenses[C.default.lens] };
+  const body = C.bodies[state.camera.body] || C.bodies[C.default.body];
+  let lens = C.lenses[state.camera.lens];
+  if (!lens || lens.mount !== body.mount) lens = Object.values(C.lenses).find((l) => l.mount === body.mount);
+  const focal = Math.min(lens.focal[1], Math.max(lens.focal[0], state.camera.focalMm || lens.focal[0]));
+  const crop = body.format === "ff" && lens.format !== "ff";
+  const sensorH = crop ? C.cropSensorHeightMm[body.mount] || 15.6 : body.sensorHeightMm;
+  return { body, lens, focal, crop, sensorH };
+}
+export function lensesFor(bodyId) {
+  const C = cameras(), mount = C.bodies[bodyId]?.mount;
+  return Object.entries(C.lenses).filter(([, l]) => l.mount === mount);
+}
+
+// Where the camera stands. It keeps the same head-and-shoulders framing (about 0.45 m of
+// subject top to bottom) by stepping back for long lenses and in for wide ones, the way a
+// photographer would, until it's as close as it can sensibly get (0.45 m) or 8 m away.
+export const FRAME_HEIGHT_M = 0.45;
+export function cameraView(state) {
+  const { focal, sensorH } = cameraGear(state);
+  const fovDeg = (2 * Math.atan(sensorH / 2 / focal) * 180) / Math.PI;
+  const distance = Math.max(0.45, Math.min(8, (FRAME_HEIGHT_M * focal) / sensorH));
+  return { position: [0, -0.03, distance], target: [0, -0.03, 0], fovDeg, distance };
 }
 export function setGear(g) { GEAR = g; }
 export function gear() {

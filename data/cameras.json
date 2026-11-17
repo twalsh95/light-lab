@@ -1,25 +1,33 @@
 {
-  "version": 1,
+  "version": 2,
   "notes": [
-    "Cameras and lenses for Light Lab. Tom will list the room's real cameras; until then there is one typical camera.",
-    "sensorHeightMm sets how much the background blurs (depth of field). The framing in the app stays the same (head and shoulders) whatever the lens."
+    "Tom's cameras and lenses (list given Nov 17 2026). A lens fits a body when the mounts match. APS-C lenses on a full-frame body use the camera's APS-C crop mode.",
+    "sensorHeightMm and focal length set the framing distance and background blur. The app keeps a head-and-shoulders framing: the camera steps back for longer lenses.",
+    "\"verified\": true = checked against the maker's or a reliable spec listing during the build. false = from general knowledge of these models; worth a glance at the manual.",
+    "Cine lenses are marked in T-stops (light actually transmitted). Exposure uses the T-stop; depth of field uses the f-number, about 7% smaller."
   ],
   "bodies": {
-    "generic-apsc": {
-      "name": "Typical camera (APS-C sensor)",
-      "sensorHeightMm": 15.6,
-      "iso": [100, 6400],
-      "shutter": [30, 0.00025],
-      "source": "Typical entry-level interchangeable-lens camera. Placeholder until Tom lists the room's cameras."
-    }
+    "sony-a65":   { "name": "Sony a65",     "mount": "sony-a", "format": "apsc", "sensorHeightMm": 15.6, "iso": [100, 16000], "shutter": [30, 0.00025], "verified": false, "source": "Sony SLT-A65: APS-C 23.5 x 15.6 mm, ISO 100-16000, 1/4000-30 s." },
+    "sony-a55":   { "name": "Sony a55",     "mount": "sony-a", "format": "apsc", "sensorHeightMm": 15.6, "iso": [100, 12800], "shutter": [30, 0.00025], "verified": false, "source": "Sony SLT-A55: APS-C 23.5 x 15.6 mm, ISO 100-12800, 1/4000-30 s." },
+    "sony-a58":   { "name": "Sony a58",     "mount": "sony-a", "format": "apsc", "sensorHeightMm": 15.4, "iso": [100, 16000], "shutter": [30, 0.00025], "verified": true,  "source": "Sony SLT-A58 spec sheet: APS-C 23.2 x 15.4 mm, ISO 100-16000, 1/4000-30 s." },
+    "sony-a99ii": { "name": "Sony a99 II",  "mount": "sony-a", "format": "ff",   "sensorHeightMm": 24.0, "iso": [100, 25600], "shutter": [30, 0.000125], "verified": false, "source": "Sony ILCA-99M2: full frame 35.9 x 24.0 mm, ISO 100-25600, 1/8000-30 s." },
+    "sony-a7iv":  { "name": "Sony a7 IV",   "mount": "sony-e", "format": "ff",   "sensorHeightMm": 23.9, "iso": [100, 51200], "shutter": [30, 0.000125], "verified": false, "source": "Sony ILCE-7M4: full frame 35.9 x 23.9 mm, ISO 100-51200, 1/8000-30 s." },
+    "sony-a6100": { "name": "Sony a6100",   "mount": "sony-e", "format": "apsc", "sensorHeightMm": 15.6, "iso": [100, 32000], "shutter": [30, 0.00025], "verified": false, "source": "Sony ILCE-6100: APS-C 23.5 x 15.6 mm, ISO 100-32000, 1/4000-30 s." },
+    "canon-t7":   { "name": "Canon Rebel T7", "mount": "canon-ef", "format": "apsc-canon", "sensorHeightMm": 14.9, "iso": [100, 6400], "shutter": [30, 0.00025], "verified": false, "source": "Canon EOS Rebel T7 (2000D): APS-C 22.3 x 14.9 mm, ISO 100-6400, 1/4000-30 s." }
   },
   "lenses": {
-    "generic-85": {
-      "name": "85 mm f/1.8 portrait lens",
-      "focalMm": 85,
-      "aperture": [1.8, 22],
-      "source": "A common portrait lens. Placeholder until Tom lists the room's lenses."
-    }
+    "sony-dt-18-55":   { "name": "Sony DT 18-55mm f/3.5-5.6 SAM",  "mount": "sony-a", "format": "apsc", "focal": [18, 55],  "maxAperture": [3.5, 5.6], "minAperture": [22, 36], "verified": false, "source": "Sony SAL1855 kit lens." },
+    "sony-dt-35":      { "name": "Sony DT 35mm f/1.8 SAM",         "mount": "sony-a", "format": "apsc", "focal": [35, 35],  "maxAperture": [1.8, 1.8], "minAperture": [22, 22], "verified": false, "source": "Sony SAL35F18." },
+    "sigma-70-300":    { "name": "Sigma 70-300mm f/4-5.6 DG",      "mount": "sony-a", "format": "ff",   "focal": [70, 300], "maxAperture": [4, 5.6],   "minAperture": [22, 32], "verified": false, "source": "Sigma 70-300mm F4-5.6 DG (A-mount version assumed)." },
+    "rokinon-14":      { "name": "Rokinon 14mm T3.1 (cine)",       "mount": "sony-a", "format": "ff",   "focal": [14, 14],  "maxAperture": [3.1, 3.1], "minAperture": [22, 22], "tStop": true, "verified": true,  "source": "Rokinon 14mm T3.1 ED AS IF UMC cine: T3.1-T22, manual focus." },
+    "rokinon-85":      { "name": "Rokinon 85mm T1.5 (cine)",       "mount": "sony-a", "format": "ff",   "focal": [85, 85],  "maxAperture": [1.5, 1.5], "minAperture": [22, 22], "tStop": true, "verified": true,  "source": "Rokinon 85mm T1.5 AS IF UMC cine: T1.5-T22, full frame, manual focus." },
+    "sony-dt-55-300":  { "name": "Sony DT 55-300mm f/4.5-5.6 SAM", "mount": "sony-a", "format": "apsc", "focal": [55, 300], "maxAperture": [4.5, 5.6], "minAperture": [29, 36], "verified": false, "source": "Sony SAL55300." },
+    "sony-e-55-210":   { "name": "Sony E 55-210mm f/4.5-6.3",      "mount": "sony-e", "format": "apsc", "focal": [55, 210], "maxAperture": [4.5, 6.3], "minAperture": [22, 32], "verified": false, "source": "Sony SEL55210." },
+    "sony-fe-24-70gm": { "name": "Sony FE 24-70mm f/2.8 GM",       "mount": "sony-e", "format": "ff",   "focal": [24, 70],  "maxAperture": [2.8, 2.8], "minAperture": [22, 22], "verified": false, "source": "Sony SEL2470GM." },
+    "meike-85":        { "name": "Meike 85mm f/1.8 FF STM",        "mount": "sony-e", "format": "ff",   "focal": [85, 85],  "maxAperture": [1.8, 1.8], "minAperture": [22, 22], "verified": true,  "source": "Meike 85mm F1.8 FF STM (Sony E): f/1.8-f/22, autofocus." },
+    "canon-efs-18-55": { "name": "Canon EF-S 18-55mm f/3.5-5.6 IS II", "mount": "canon-ef", "format": "apsc-canon", "focal": [18, 55], "maxAperture": [3.5, 5.6], "minAperture": [22, 36], "verified": false, "source": "Canon EF-S 18-55mm IS II kit lens." },
+    "canon-ef-75-300": { "name": "Canon EF 75-300mm f/4-5.6 III",  "mount": "canon-ef", "format": "ff",   "focal": [75, 300], "maxAperture": [4, 5.6],   "minAperture": [32, 45], "verified": false, "source": "Canon EF 75-300mm III." }
   },
-  "default": { "body": "generic-apsc", "lens": "generic-85" }
+  "cropSensorHeightMm": { "sony-a": 15.6, "sony-e": 15.6 },
+  "default": { "body": "sony-a65", "lens": "rokinon-85" }
 }

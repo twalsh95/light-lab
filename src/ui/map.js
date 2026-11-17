@@ -6,7 +6,7 @@
 // steps). + and - change power. Space turns a light on or off. Delete removes it.
 import { mapPoint, fromMapPoint, backdropLightPosition, lightSpec, lightAim, lightPosition } from "../scene/lightmath.js";
 import { ROLES } from "../scene/schema.js";
-import { fixture, reflectorItem } from "../scene/gear.js";
+import { fixture, reflectorItem, cameraView } from "../scene/gear.js";
 
 const NS = "http://www.w3.org/2000/svg";
 export const MAP_VIEW = { x: -2.7, y: -2.4, w: 5.4, h: 5.2 };
@@ -59,6 +59,7 @@ export function createMap(container, { onMove, onPower, onToggle, onSelect, onEn
   el("path", { d: "M0,0.093 L0.03,0.125 L-0.03,0.125 Z", class: "subject nose" }, middle);
   el("text", { x: 0, y: 0.38, class: "label", "text-anchor": "middle" }, middle).textContent = "Subject";
   const cam = el("g", { transform: "translate(0 2.2)", class: "camera" }, middle);
+  const camDist = el("text", { x: 0.22, y: 0.1, class: "label" }, cam);
   el("rect", { x: -0.16, y: -0.06, width: 0.32, height: 0.2 }, cam);
   el("path", { d: "M-0.07,-0.06 L-0.1,-0.16 L0.1,-0.16 L0.07,-0.06 Z" }, cam);
   el("text", { x: 0, y: 0.42, class: "label", "text-anchor": "middle" }, cam).textContent = "Camera";
@@ -150,6 +151,11 @@ export function createMap(container, { onMove, onPower, onToggle, onSelect, onEn
   function update(s, sel) {
     state = s;
     sync(s);
+    // The camera stands wherever the lens needs it for head-and-shoulders framing. If that's
+    // off the map, it sits at the edge with its distance written beside it.
+    const cd = cameraView(s).distance, shown = Math.min(cd, VB.y + VB.h - 0.45);
+    cam.setAttribute("transform", `translate(0 ${shown.toFixed(3)})`);
+    camDist.textContent = cd > shown + 0.01 ? `${cd.toFixed(1)} m away` : `${cd.toFixed(1)} m`;
     const d = s.backdrop.distance;
     backdrop.setAttribute("x1", -2.4); backdrop.setAttribute("x2", 2.4);
     backdrop.setAttribute("y1", -d); backdrop.setAttribute("y2", -d);

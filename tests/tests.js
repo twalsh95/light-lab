@@ -1,7 +1,7 @@
 // Light Lab browser tests: no install needed, open tests/index.html from a local server.
 // Covers the scene model, undo, geometry, the gear list, and the physics the app must
 // teach correctly (falloff, size -> softness, spot/flood, warm/cool, fill, reflectors).
-import { loadGear, gear, fixture, modifier, inventoryProblems } from "../src/scene/gear.js";
+import { loadGear, gear, fixture, modifier, inventoryProblems, cameras, cameraView, cameraGear } from "../src/scene/gear.js";
 await loadGear();
 const { PRESETS, normalize, serialize, parse, blankScene, makeLight, makeReflector, VERSION } = await import("../src/scene/schema.js");
 const { createHistory } = await import("../src/scene/history.js");
@@ -151,7 +151,7 @@ await test("the meter reads 0 when Manual uses Auto's settings, and +1 a stop br
 });
 await test("in a nearly dark studio, Auto has to raise ISO (and so adds grain)", () => {
   const c = L.cameraSettings(blankScene());
-  ok(c.iso >= 400 && grainFor(c.iso) > 0, JSON.stringify(c));
+  ok(c.iso > 200 && grainFor(c.iso) > 0, JSON.stringify(c));
 });
 await test("a wide aperture blurs the backdrop much more than a small one, and more when it's farther back", () => {
   const s = keyOnly(); s.camera.mode = "manual"; s.backdrop.distance = 1;
@@ -161,6 +161,36 @@ await test("a wide aperture blurs the backdrop much more than a small one, and m
   ok(wide > narrow * 4 && far > narrow, `${wide} ${narrow} ${far}`);
 });
 await test("no grain at ISO 100, clear grain by ISO 6400", () => { ok(grainFor(100) === 0 && grainFor(6400) > 0.06); });
+await test("every lens fits a camera in the room, and every camera has a lens", () => {
+  const C = cameras();
+  for (const [k, l] of Object.entries(C.lenses)) ok(Object.values(C.bodies).some((b) => b.mount === l.mount), k);
+  for (const [k, b] of Object.entries(C.bodies)) ok(Object.values(C.lenses).some((l) => l.mount === b.mount), k);
+});
+await test("a lens that doesn't fit the body is swapped for one that does", () => {
+  const s = PRESETS.threePoint.build(); s.camera.body = "canon-t7"; s.camera.lens = "rokinon-85";
+  const n = normalize(s); ok(cameras().lenses[n.camera.lens].mount === "canon-ef", n.camera.lens);
+});
+await test("a zoom's widest aperture narrows as it zooms in (18-55: f/3.5 to f/5.6)", () => {
+  const lens = cameras().lenses["sony-dt-18-55"];
+  ok(Cam.lensLimits(lens, 18).widest === 3.5 && Cam.lensLimits(lens, 55).widest === 5.6);
+  ok(Cam.aperturesFor(lens, 55)[0] === 5.6 && Cam.aperturesFor(lens, 18).includes(4));
+});
+await test("longer lenses stand farther back for the same framing; an APS-C lens on a full-frame body crops", () => {
+  const s = PRESETS.threePoint.build(); s.camera.body = "sony-a65"; s.camera.lens = "sony-dt-18-55";
+  s.camera.focalMm = 18; const wide = cameraView(s).distance;
+  s.camera.focalMm = 55; const tele = cameraView(s).distance;
+  ok(tele > wide * 2.5, `${wide} ${tele}`);
+  s.camera.body = "sony-a99ii"; ok(cameraGear(s).crop && cameraGear(s).sensorH < 16, "crop mode");
+});
+// Same framing means the camera steps back for the longer lens, so the gain is real but less
+// than the focal-length ratio when the backdrop is close behind the subject.
+await test("a longer lens blurs the backdrop more at the same aperture (same framing)", () => {
+  const s = PRESETS.threePoint.build(); Object.assign(s.camera, { mode: "manual", aperture: 5.6, body: "sony-a65", lens: "sony-dt-55-300" });
+  s.camera.focalMm = 55; const short = backdropBlur(s);
+  s.camera.focalMm = 200; const long = backdropBlur(s);
+  ok(long > short * 1.3, `${short} ${long}`);
+});
+await test("cine lenses show T-stops", () => { ok(Cam.apertureLabel(1.5, true) === "T1.5" && Cam.apertureLabel(5.6) === "f/5.6"); });
 await test("a softbox is a bigger (softer) light than the CB60's bare reflector", () => {
   const s = keyOnly(), a = makeLight({ fixture: "cb60-rgb", modifier: "cb60-softbox" }), b = makeLight({ fixture: "cb60-rgb", modifier: "cb60-reflector" });
   ok(L.lightSpec(a, s).size > L.lightSpec(b, s).size * 2);

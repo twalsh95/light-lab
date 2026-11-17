@@ -4,7 +4,7 @@
 // Version 2 (Phase 3): each light is a real fixture from data/gear.json with a modifier.
 // Units: metres and degrees. power 0..1.
 import { gear, fixture, modifier, reflectorItem, cameras } from "./gear.js";
-import { APERTURES, SHUTTERS, ISOS, snap } from "./camera.js";
+import { SHUTTERS, ISOS, snap, aperturesFor } from "./camera.js";
 
 export const VERSION = 2;
 
@@ -56,7 +56,7 @@ export function blankScene() {
     mode: "room",
     subject: { model: "clay-head", skin: "clay", clothing: "match" },
     // mode "auto" lets the camera choose aperture, shutter and ISO; "manual" uses these.
-    camera: { mode: "auto", aperture: 5.6, shutter: 1 / 60, iso: 100, evCompensation: 0, whiteBalance: "daylight", body: "generic-apsc", lens: "generic-85" },
+    camera: { mode: "auto", aperture: 5.6, shutter: 1 / 60, iso: 100, evCompensation: 0, whiteBalance: "daylight", body: "sony-a65", lens: "rokinon-85", focalMm: 85 },
     backdrop: { type: "white", brightness: 0.5, distance: 1.0 },
     room: { ambient: 0.006 },
     lights: [],
@@ -148,11 +148,15 @@ export function normalize(input) {
   const c = input.camera || {};
   const C = cameras();
   s.camera.body = C.bodies[c.body] ? c.body : C.default.body;
-  s.camera.lens = C.lenses[c.lens] ? c.lens : C.default.lens;
-  const body = C.bodies[s.camera.body], lens = C.lenses[s.camera.lens];
+  const body = C.bodies[s.camera.body];
+  // The lens has to fit the body's mount; otherwise use the first lens that does.
+  s.camera.lens = C.lenses[c.lens] && C.lenses[c.lens].mount === body.mount ? c.lens
+    : (C.lenses[C.default.lens].mount === body.mount ? C.default.lens : Object.keys(C.lenses).find((k) => C.lenses[k].mount === body.mount));
+  const lens = C.lenses[s.camera.lens];
+  s.camera.focalMm = Math.round(num(c.focalMm, lens.focal, lens.focal[0]));
   s.camera.mode = c.mode === "manual" ? "manual" : "auto";
   s.camera.evCompensation = num(c.evCompensation, LIMITS.ev, 0);
-  s.camera.aperture = snap(APERTURES.filter((a) => a >= lens.aperture[0] && a <= lens.aperture[1]), num(c.aperture, [0.5, 64], 5.6));
+  s.camera.aperture = snap(aperturesFor(lens, s.camera.focalMm), num(c.aperture, [0.5, 64], 5.6));
   s.camera.shutter = snap(SHUTTERS.filter((t) => t <= body.shutter[0] && t >= body.shutter[1]), num(c.shutter, [1e-5, 60], 1 / 60));
   s.camera.iso = snap(ISOS.filter((i) => i >= body.iso[0] && i <= body.iso[1]), num(c.iso, [25, 102400], 100));
   s.camera.whiteBalance = ["daylight", "tungsten", "auto"].includes(c.whiteBalance) ? c.whiteBalance : "daylight";

@@ -3,9 +3,9 @@
 // marches a soft-shadow ray toward each light. Shadow softness comes from the light's size
 // and distance (a cone of half-angle atan(radius / distance)), so big + close = soft,
 // small + far = hard, and a shadow softens the farther it falls from what casts it.
-import { CAMERA, HEAD, UNIT, SKIN } from "../scene/head.js";
+import { HEAD, UNIT, SKIN } from "../scene/head.js";
 import { resolveLights, exposureFor, materials, whiteBalanceGain, cameraSettings } from "../scene/lightmath.js";
-import { cameraGear } from "../scene/gear.js";
+import { cameraGear, cameraView } from "../scene/gear.js";
 
 export const LEVELS = {
   low:    { scale: 0.5,  steps: 48, shadowSteps: 20 },
@@ -50,13 +50,16 @@ void main(){
   outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }`;
 
-// How much the backdrop blurs, as a fraction of the picture's height (circle of confusion
-// for a lens focused on the face, 2.2 m away).
+// How much the backdrop blurs, as a fraction of the picture's height: the circle of
+// confusion for a lens focused on the face. Cine lenses are marked in T-stops; their
+// f-number (which sets depth of field) is about 7% smaller.
 export function backdropBlur(state) {
-  const { aperture } = cameraSettings(state), { body, lens } = cameraGear(state);
-  const f = lens.focalMm / 1000, s = 2.2, d = s + state.backdrop.distance;
-  const cocMm = (f * f / (aperture * (s - f))) * (Math.abs(d - s) / d) * 1000;
-  return cocMm / body.sensorHeightMm;
+  const { aperture } = cameraSettings(state), { lens, focal, sensorH } = cameraGear(state);
+  const N = lens.tStop ? aperture / 1.07 : aperture;
+  const f = focal / 1000, s = cameraView(state).distance, d = s + state.backdrop.distance;
+  if (s <= f) return 0;
+  const cocMm = (f * f / (N * (s - f))) * (Math.abs(d - s) / d) * 1000;
+  return cocMm / sensorH;
 }
 // Grain strength for an ISO: none at base ISO, clearly visible by 3200-6400.
 export function grainFor(iso) {
@@ -319,9 +322,10 @@ export function createShaderRenderer(canvas) {
     gl.uniform3fv(U.uCloth, mat.clothing);
     gl.uniform1f(U.uExposure, exposureFor(state));
     gl.uniform3fv(U.uWB, whiteBalanceGain(state));
-    gl.uniform3fv(U.uCamPos, CAMERA.position);
-    gl.uniform3fv(U.uCamTarget, CAMERA.target);
-    gl.uniform1f(U.uFov, CAMERA.fovDeg);
+    const cv = cameraView(state);
+    gl.uniform3fv(U.uCamPos, cv.position);
+    gl.uniform3fv(U.uCamTarget, cv.target);
+    gl.uniform1f(U.uFov, cv.fovDeg);
   }
 
   return {
