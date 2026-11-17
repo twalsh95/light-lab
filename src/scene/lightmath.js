@@ -33,6 +33,44 @@ export function backdropLightPosition(state, index = 0) {
   return [x, -0.22, -Math.min(0.55, state.backdrop.distance * 0.45)];
 }
 
+// Where a light points. "face" = the subject's face; "backdrop" = the paper right behind
+// the subject. Pan and tilt then nudge the aim (degrees), for example to feather a light
+// so only the edge of its beam reaches the face, or to put a pool of light on one side
+// of the backdrop.
+export function lightAim(l, state, position) {
+  const at = l.role === "backdrop" ? "backdrop" : l.aim?.at || "face";
+  const base = at === "backdrop" ? [0, -0.05, -state.backdrop.distance] : [0, 0, 0];
+  // Positive pan turns the light to its right, as seen standing behind it (clockwise from above).
+  const pan = -rad(l.aim?.panDeg || 0), tilt = rad(l.aim?.tiltDeg || 0);
+  let d = sub(base, position);
+  const len = Math.hypot(...d);
+  if (pan || tilt) {
+    // Pan: turn left/right about the vertical. Tilt: tip up/down.
+    const c = Math.cos(pan), s = Math.sin(pan);
+    d = [d[0] * c + d[2] * s, d[1], -d[0] * s + d[2] * c];
+    const horiz = Math.hypot(d[0], d[2]) || 1e-6;
+    const el = Math.max(-1.5, Math.min(1.5, Math.atan2(d[1], horiz) + tilt)), k = Math.cos(el) / horiz;
+    d = [d[0] * k, Math.sin(el), d[2] * k];            // a unit vector: pan kept, tilt added
+    return add(position, scale(d, len));
+  }
+  return base;
+}
+
+// A light can't shine through the backdrop paper. This is true when it stands behind it.
+export function behindBackdrop(position, state) {
+  return position[2] < -state.backdrop.distance + 0.05;
+}
+
+// Plain-language warnings about the scene (shown in both modes).
+export function sceneWarnings(state) {
+  const out = [];
+  for (const l of state.lights) {
+    if (l.role === "backdrop") continue;
+    if (behindBackdrop(lightPosition(l), state)) out.push(`The ${l.role} light is behind the backdrop paper, so its light can't reach the subject. Move it closer, or move the backdrop back.`);
+  }
+  return out;
+}
+
 export function kelvinToRGB(k) {
   // Tanner Helland's curve fit, linearised and balanced so 5600 K is neutral.
   const raw = (kk) => {
@@ -106,7 +144,8 @@ export function resolveLights(state) {
     if (spec.intensity <= 0) continue;
     const isBg = l.role === "backdrop";
     const position = isBg ? backdropLightPosition(state, bgIndex++) : lightPosition(l);
-    const target = isBg ? [0, -0.05, -state.backdrop.distance] : [0, 0, 0];
+    if (!isBg && behindBackdrop(position, state)) continue;   // the paper blocks it
+    const target = lightAim(l, state, position);
     const dir = norm(sub(target, position));
     out.push({
       id: l.id, role: l.role, position, target, dir, intensity: spec.intensity, color: spec.color,
@@ -143,12 +182,17 @@ export function resolveLights(state) {
   return out;
 }
 
+// How bright the beam is at an angle off its centre. coneDeg is half the published beam
+// angle, which by convention is where the light falls to half its centre brightness. Past
+// that it keeps fading (spill), and is gone by about twice that angle, like a real beam.
 export function coneFactor(L, fromLight) {
-  const c = dot(norm(fromLight), L.dir);
-  const outer = Math.cos(rad(L.coneDeg)), inner = Math.cos(rad(L.coneDeg * 0.6));
-  const t = Math.max(0, Math.min(1, (c - outer) / (inner - outer)));
-  return t * t * (3 - 2 * t);
+  const c = Math.max(-1, Math.min(1, dot(norm(fromLight), L.dir)));
+  const th = Math.acos(c), b = rad(Math.max(1, L.coneDeg));
+  if (th >= 2 * b) return 0;
+  const edge = th <= 1.6 * b ? 1 : 1 - smooth((th - 1.6 * b) / (0.4 * b));
+  return Math.exp(-Math.LN2 * Math.pow(th / b, 4)) * edge;
 }
+const smooth = (t) => { const x = Math.max(0, Math.min(1, t)); return x * x * (3 - 2 * x); };
 // Barn doors / flags, sharp-edged (the shader softens them; this is for metering).
 export function shutterFactor(L, p) {
   const v = sub(p, L.position), { right, up } = beamFrame(L.dir), z = dot(v, L.dir);

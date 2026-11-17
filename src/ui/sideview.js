@@ -3,6 +3,7 @@
 // out changes its distance, the same as on the map.
 import { ROLES } from "../scene/schema.js";
 import { SHAPE_PATHS } from "./map.js";
+import { lightAim, lightPosition } from "../scene/lightmath.js";
 
 const NS = "http://www.w3.org/2000/svg";
 const el = (tag, attrs = {}, parent) => {
@@ -76,7 +77,13 @@ export function createSideView(container, { onChange, onEndGroup }) {
       g.setAttribute("class", `light ${role}${l.on === false ? " off" : ""}`);
       shape.setAttribute("d", role === "reflector" ? "M-0.05,-0.3 H0.05 V0.3 H-0.05 Z" : SHAPE_PATHS[role]);
       letter.textContent = role === "reflector" ? "" : ROLES[role].letter;
-      beam.setAttribute("x1", across); beam.setAttribute("y1", up); beam.setAttribute("x2", 0); beam.setAttribute("y2", 0);
+      // Where it points, measured along the same line as the light (so 'behind' is negative).
+      let tAcross = 0, tUp = 0;
+      if (role !== "reflector") {
+        const t = lightAim(l, s, lightPosition(l)), az = (l.azimuthDeg * Math.PI) / 180;
+        tAcross = t[0] * Math.sin(az) + t[2] * Math.cos(az); tUp = -t[1];
+      }
+      beam.setAttribute("x1", across); beam.setAttribute("y1", up); beam.setAttribute("x2", tAcross); beam.setAttribute("y2", tUp);
       beam.setAttribute("class", `ray ${role}`);
       g.setAttribute("aria-valuenow", Math.round(l.elevationDeg));
       g.setAttribute("aria-valuetext", `${Math.round(l.elevationDeg)} degrees ${l.elevationDeg >= 0 ? "above" : "below"} eye level`);

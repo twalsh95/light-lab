@@ -166,6 +166,30 @@ await test("a barn door folded in cuts the light off that side", () => {
   ok(L.shutterFactor(Lt, [0, 0, 0]) === 1, "face lit");
   s.lights[0].shutters.top = 0.9; ok(L.shutterFactor(L.resolveLights(s)[0], [0, 0, 0]) === 0, "top door blocks the face");
 });
+await test("a beam is at half brightness at its published beam angle, and spills a little past it", () => {
+  const s = keyOnly({ fixture: "fresnel-650", modifier: "fresnel-lens", flood: 0 }), Lt = L.resolveLights(s)[0];
+  const at = (deg) => { const a = deg * Math.PI / 180; return L.coneFactor(Lt, [Math.sin(a), 0, -Math.cos(a)]); };
+  near(at(Lt.coneDeg), 0.5, 0.01, "at the beam angle");
+  ok(at(Lt.coneDeg * 1.3) > 0.05 && at(Lt.coneDeg * 2.1) === 0, "spill, then nothing");
+});
+await test("aiming a light at the backdrop lights the paper, not the face", () => {
+  const narrow = { fixture: "cb60-rgb", modifier: "snoot", azimuthDeg: -60, distance: 1.5 };
+  const face = keyOnly(narrow), paper = keyOnly({ ...narrow, aim: { at: "backdrop", panDeg: 0, tiltDeg: 0 } });
+  face.backdrop.distance = paper.backdrop.distance = 1.2;
+  const spot = [0, -0.05, -1.2], n = [0, 0, 1];
+  ok(L.irradianceAt(paper, spot, n) > L.irradianceAt(face, spot, n) * 1.5, "backdrop brighter");
+  ok(faceE(paper, [-0.5, 0, 0.87]) < faceE(face, [-0.5, 0, 0.87]), "face dimmer");
+});
+await test("turning a light (feathering) moves its beam off the face", () => {
+  const a = keyOnly({ fixture: "fresnel-650", modifier: "fresnel-lens", flood: 0, distance: 2 });
+  const b = keyOnly({ fixture: "fresnel-650", modifier: "fresnel-lens", flood: 0, distance: 2, aim: { at: "face", panDeg: 10, tiltDeg: 0 } });
+  ok(faceE(b) < faceE(a) * 0.5, `${faceE(b)} vs ${faceE(a)}`);
+});
+await test("a light behind the backdrop paper can't light the subject, and says so", () => {
+  const s = keyOnly({ azimuthDeg: 180, distance: 1.5 }); s.backdrop.distance = 1.0;
+  ok(L.resolveLights(s).length === 0, "blocked");
+  ok(L.sceneWarnings(s).some((w) => /behind the backdrop/.test(w)), "warning");
+});
 await test("halogen Fresnels have no dimmer in Room mode", () => {
   const s = keyOnly({ fixture: "fresnel-650", modifier: "fresnel-lens", power: 0.2 });
   const open = L.lightSpec(s.lights[0], s).intensity; s.mode = "room";

@@ -2,7 +2,7 @@
 // PNG or a one-page PDF (for Google Classroom). Made entirely in the browser.
 import { ROLES } from "../scene/schema.js";
 import { gear, fixture, modifier, reflectorItem } from "../scene/gear.js";
-import { lightSpec, mapPoint, backdropLightPosition } from "../scene/lightmath.js";
+import { lightSpec, mapPoint, backdropLightPosition, lightAim, lightPosition } from "../scene/lightmath.js";
 import { SHAPE_PATHS, MAP_VIEW } from "./map.js";
 
 const W = 1650, H = 1275;   // US Letter, landscape, at 150 dpi
@@ -28,6 +28,8 @@ export function settingsLines(s) {
     if (m.gobo) extras.push(`${G.gobos[l.gobo].name.toLowerCase()} gobo`);
     if (l.flag) extras.push(`black flag on the ${l.flag.side === "camera" || l.flag.side === "backdrop" ? l.flag.side + " side" : l.flag.side}`);
     if (Object.values(l.shutters).some((v) => v > 0) && f.barnDoors) extras.push("barn doors");
+    if (l.role !== "backdrop" && l.aim?.at === "backdrop") extras.push("aimed at the backdrop");
+    if (l.aim?.panDeg || l.aim?.tiltDeg) extras.push(`turned ${l.aim.panDeg || 0}°, tilted ${l.aim.tiltDeg || 0}°`);
     lines.push(`${label}  ${ROLES[l.role].label}${l.on ? "" : " (off)"}: ${f.short}, ${m.name} (${Math.round(spec.size * 100)} cm), ` +
       `${f.dimmable || s.mode !== "room" ? Math.round(l.power * 100) + "%" : "full"}, ${where}, ${colour}${extras.length ? ", " + extras.join(", ") : ""}`);
   }
@@ -67,9 +69,10 @@ export function drawDiagram(g, s, x0, y0, w, h) {
     let x, z;
     if (l.role === "backdrop") { const p = backdropLightPosition(s, bg++); x = p[0]; z = p[2]; } else ({ x, z } = mapPoint(l));
     if (l.role !== "backdrop") {
-      const size = lightSpec(l, s).size, ang = Math.atan2(-z, -x), px = -Math.sin(ang), pz = Math.cos(ang);
+      const t = lightAim(l, s, lightPosition(l)), tx = t[0], tz = t[2];
+      const size = lightSpec(l, s).size, ang = Math.atan2(tz - z, tx - x), px = -Math.sin(ang), pz = Math.cos(ang);
       g.globalAlpha = l.on ? 0.18 : 0.06; g.fillStyle = col;
-      g.beginPath(); g.moveTo(...P(x + px * size / 2, z + pz * size / 2)); g.lineTo(...P(px * 0.12, pz * 0.12)); g.lineTo(...P(-px * 0.12, -pz * 0.12)); g.lineTo(...P(x - px * size / 2, z - pz * size / 2)); g.fill();
+      g.beginPath(); g.moveTo(...P(x + px * size / 2, z + pz * size / 2)); g.lineTo(...P(tx + px * 0.12, tz + pz * 0.12)); g.lineTo(...P(tx - px * 0.12, tz - pz * 0.12)); g.lineTo(...P(x - px * size / 2, z - pz * size / 2)); g.fill();
       g.globalAlpha = 1; g.strokeStyle = col; g.lineWidth = 5;
       g.beginPath(); g.moveTo(...P(x + px * size / 2, z + pz * size / 2)); g.lineTo(...P(x - px * size / 2, z - pz * size / 2)); g.stroke();
     }

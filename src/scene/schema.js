@@ -10,7 +10,7 @@ export const VERSION = 2;
 export const LIMITS = {
   power: [0, 1], azimuthDeg: [-180, 180], elevationDeg: [-30, 75], distance: [0.4, 4],
   size: [0.03, 1.5], backdropDistance: [0.4, 3], brightness: [0.02, 0.95], ev: [-3, 3],
-  kelvin: [1500, 10000], hue: [0, 360], sat: [0, 1], flood: [0, 1], cut: [0, 0.95],
+  kelvin: [1500, 10000], hue: [0, 360], sat: [0, 1], flood: [0, 1], cut: [0, 0.95], aim: [-45, 45],
   maxLights: 6, maxReflectors: 2,
 };
 
@@ -41,6 +41,7 @@ export function makeLight(o) {
     kelvin: f.kelvin[0] === f.kelvin[1] ? f.kelvin[0] : 5600,
     color: { mode: "white", hue: 30, sat: 1 }, gel: "none", gobo: "window", flood: 0.5,
     shutters: { top: 0, bottom: 0, camera: 0, backdrop: 0 }, flag: null, sizeOverride: null,
+    aim: { at: "face", panDeg: 0, tiltDeg: 0 },
   }, o);
   return l;
 }
@@ -177,6 +178,7 @@ export function normalize(input) {
       shutters: { top: num(sh.top, LIMITS.cut, 0), bottom: num(sh.bottom, LIMITS.cut, 0), camera: num(sh.camera, LIMITS.cut, 0), backdrop: num(sh.backdrop, LIMITS.cut, 0) },
       flag: g.flag && SIDES[g.flag.side] ? { side: g.flag.side, amount: num(g.flag.amount, LIMITS.cut, 0.5) } : null,
       sizeOverride: s.mode === "open" && typeof g.sizeOverride === "number" ? num(g.sizeOverride, LIMITS.size, 0.6) : null,
+      aim: { at: g.aim?.at === "backdrop" ? "backdrop" : "face", panDeg: num(g.aim?.panDeg, LIMITS.aim, 0), tiltDeg: num(g.aim?.tiltDeg, LIMITS.aim, 0) },
     }));
   }
   for (const g of (Array.isArray(input.reflectors) ? input.reflectors : []).slice(0, LIMITS.maxReflectors)) {

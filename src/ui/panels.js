@@ -3,7 +3,7 @@
 // can drag or type: the same goal, different means.
 import { ROLES, SIDES, LIMITS, makeLight, makeReflector, newId } from "../scene/schema.js";
 import { gear, fixture, modifier, reflectorItem, inventory, inventoryProblems, remaining } from "../scene/gear.js";
-import { lightSpec } from "../scene/lightmath.js";
+import { lightSpec, sceneWarnings } from "../scene/lightmath.js";
 
 let uid = 0;
 export function h(tag, attrs = {}, ...kids) {
@@ -128,7 +128,7 @@ export function createPanels(els, history, { onSelect, announce }) {
   function lightRows(s, l) {
     const f = fixture(l.fixture), spec = lightSpec(l, s);
     const room = s.mode === "room";
-    const out = { basics: [], colour: [], beam: [], about: [] };
+    const out = { basics: [], aim: [], colour: [], beam: [], about: [] };
     out.basics.push(selectRow({ key: "fixture", label: "Light",
       options: Object.entries(G().fixtures).filter(([id, x]) => (!x.openOnly || !room) && (!room || id === l.fixture || remaining(s, "fixtures", id) > 0)).map(([id, x]) => [id, x.name]),
       get: () => findLight(history.state)?.fixture,
@@ -148,7 +148,17 @@ export function createPanels(els, history, { onSelect, announce }) {
         min: LIMITS.elevationDeg[0], max: LIMITS.elevationDeg[1], step: 1, unit: "°", get: (st) => findLight(st)?.elevationDeg ?? 0, set: onLight((x, v) => { x.elevationDeg = v; }, "el-" + l.id) }));
       out.basics.push(numberRow({ key: "dist", label: "Distance", hint: "Farther away = dimmer (falloff) and harder shadows.",
         min: LIMITS.distance[0], max: LIMITS.distance[1], step: 0.05, unit: "m", get: (st) => findLight(st)?.distance ?? 1, set: onLight((x, v) => { x.distance = v; }, "dist-" + l.id) }));
+      out.basics.push(selectRow({ key: "aimAt", label: "Points at", hint: "Aim it at the face to light the subject, or at the backdrop to light the paper behind them.",
+        options: [["face", "The face"], ["backdrop", "The backdrop"]],
+        get: () => findLight(history.state)?.aim?.at || "face", set: (v) => change((st) => { const x = findLight(st); x.aim = { ...(x.aim || {}), at: v }; }) }));
     } else out.basics.push(textRow("Where", "Hidden behind the subject, aimed at the backdrop."));
+    // Fine aim: nudge the beam off its target.
+    out.aim.push(numberRow({ key: "pan", label: "Turn", hint: "Turn the light left or right, as if you stood behind it. Turning a light so only the edge of its beam reaches the face is called feathering.",
+      min: LIMITS.aim[0], max: LIMITS.aim[1], step: 1, unit: "°", get: (st) => findLight(st)?.aim?.panDeg ?? 0,
+      set: onLight((x, v) => { x.aim = { ...(x.aim || { at: "face" }), panDeg: Math.round(v) }; }, "pan-" + l.id) }));
+    out.aim.push(numberRow({ key: "tilt", label: "Tilt", hint: "Tip the light up or down from where it points.",
+      min: LIMITS.aim[0], max: LIMITS.aim[1], step: 1, unit: "°", get: (st) => findLight(st)?.aim?.tiltDeg ?? 0,
+      set: onLight((x, v) => { x.aim = { ...(x.aim || { at: "face" }), tiltDeg: Math.round(v) }; }, "tilt-" + l.id) }));
     if (!room) out.basics.push(numberRow({ key: "size", label: "Size", hint: "Small = hard light, crisp shadows. Big = soft light, gentle shadows.",
       min: LIMITS.size[0], max: LIMITS.size[1], step: 1, unit: "cm", scale: 100, get: (st) => { const x = findLight(st); return x ? lightSpec(x, st).size : 0.5; },
       set: onLight((x, v) => { x.sizeOverride = v; }, "size-" + l.id) }));
@@ -236,7 +246,7 @@ export function createPanels(els, history, { onSelect, announce }) {
           h("button", { type: "button", class: "icon", "data-key": "remove", "aria-label": "Remove this light", title: "Remove this light", onclick: () => remove(l.id) }, "✕")),
         h("p", { class: "define" }, role.define));
       const groups = lightRows(s, l);
-      rows = [roleSel, ...groups.basics, ...groups.colour, ...groups.beam, ...groups.about,
+      rows = [roleSel, ...groups.basics, ...groups.aim, ...groups.colour, ...groups.beam, ...groups.about,
         { update(st) { const x = findLight(st); if (!x) return; onSwitch.setAttribute("aria-checked", x.on ? "true" : "false"); onSwitch.textContent = x.on ? "On" : "Off"; } }];
       els.inspector.append(roleSel.row, ...groups.basics.map((x) => x.row));
       const section = (key, title, list) => {
@@ -246,6 +256,7 @@ export function createPanels(els, history, { onSelect, announce }) {
         d.addEventListener("toggle", () => { if (d.open) openSections.add(key); else openSections.delete(key); });
         els.inspector.append(d);
       };
+      section("aim", "Fine aim (turn, tilt)", groups.aim);
       section("colour", "Colour", groups.colour);
       section("beam", "Shape the beam", groups.beam);
       section("about", "About this light", groups.about);
@@ -295,7 +306,7 @@ export function createPanels(els, history, { onSelect, announce }) {
     update(s) {
       if (selected && !findLight(s) && !findRefl(s)) selected = null;
       if (!selected && s.lights.length) selected = s.lights[0].id;
-      const probs = inventoryProblems(s);
+      const probs = [...sceneWarnings(s), ...inventoryProblems(s)];
       problems.innerHTML = "";
       probs.forEach((p) => problems.append(h("li", {}, p)));
       problems.hidden = !probs.length;

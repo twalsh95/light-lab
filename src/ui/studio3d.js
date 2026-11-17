@@ -9,7 +9,7 @@
 import { HEAD, UNIT, featureHeight } from "../scene/head.js";
 import { ROLES } from "../scene/schema.js";
 import { fixture, modifier, reflectorItem } from "../scene/gear.js";
-import { resolveLights, lightPosition, backdropLightPosition, materials, lightSpec, sub, add, norm, scale } from "../scene/lightmath.js";
+import { resolveLights, lightPosition, backdropLightPosition, lightAim, materials, lightSpec, sub, add, norm, scale } from "../scene/lightmath.js";
 
 const FLOOR = -1.45;                         // face height above the floor, in metres
 const ROLE_COLORS = { key: "#f2a93b", fill: "#6cb4ec", back: "#ff7a72", hair: "#f08cd0", accent: "#7bd88f", backdrop: "#c9cdd6", reflector: "#e2b54a" };
@@ -28,6 +28,8 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color("#121318");
@@ -35,13 +37,14 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
   const view = { yaw: 0.2, pitch: 0.62, radius: 5.6, target: new THREE.Vector3(0, -0.4, -0.25) };
 
   // Room light so the gear is always visible; the studio lights add their own on top.
-  scene.add(new THREE.HemisphereLight(0xdfe6f0, 0x30323a, 0.9));
-  const fillRoom = new THREE.DirectionalLight(0xffffff, 0.5);
+  scene.add(new THREE.HemisphereLight(0xdfe6f0, 0x30323a, 0.35));
+  const fillRoom = new THREE.DirectionalLight(0xffffff, 0.15);
   fillRoom.position.set(2, 4, 3);
   scene.add(fillRoom);
 
   // Floor with a 1 m grid.
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), new THREE.MeshStandardMaterial({ color: 0x2a2c33, roughness: 1 }));
+  floor.receiveShadow = true;
   floor.rotation.x = -Math.PI / 2; floor.position.y = FLOOR;
   scene.add(floor);
   const grid = new THREE.GridHelper(14, 14, 0x3d414b, 0x33363f);
@@ -56,6 +59,7 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
   sheet.position.y = FLOOR + 1.45 + 0.3;
   const sweep = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 0.9), backdropMat);
   sweep.rotation.x = -Math.PI / 2; sweep.position.set(0, FLOOR + 0.004, 0.45);
+  sheet.receiveShadow = true; sweep.receiveShadow = true;
   backdrop.add(sheet, sweep);
   for (const x of [-1.65, 1.65]) backdrop.add(stand(THREE, x, FLOOR, 0, 3.3, 0x55585f));
   scene.add(backdrop);
@@ -70,6 +74,7 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
   const stool = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, FLOOR * -1 - 1.05, 16), new THREE.MeshStandardMaterial({ color: 0x45484f }));
   stool.position.y = (-1.05 + FLOOR) / 2;
   subject.add(torso, stool);
+  subject.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   scene.add(subject);
 
   // The camera, on a tripod, where the portrait is taken from.
@@ -99,14 +104,15 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
     for (const l of s.lights) {
       const isBg = l.role === "backdrop";
       const p = isBg ? backdropLightPosition(s, bg++) : lightPosition(l);
-      const target = isBg ? [0, -0.05, -s.backdrop.distance] : [0, 0, 0];
+      const target = lightAim(l, s, p);
       const g = fixtureModel(THREE, l, s, p, target);
       g.userData.id = l.id;
       // The stand and a disc on the floor belong to the light: grab any part of it.
       g.add(stand(THREE, p[0], FLOOR, p[2], p[1] - FLOOR - 0.08, 0x3a3d45), floorDisc(THREE, p, ROLE_COLORS[l.role] || "#ffffff", isBg));
       lightsGroup.add(g);
       pickables.push(g);
-      const sl = new THREE.SpotLight(0xffffff, 0, 0, Math.PI / 3, 0.5, 2);
+      const sl = new THREE.SpotLight(0xffffff, 0, 0, Math.PI / 3, 0.7, 2);
+      sl.castShadow = true; sl.shadow.mapSize.set(512, 512); sl.shadow.bias = -0.0005; sl.shadow.camera.near = 0.1;
       sl.position.set(...p); sl.target.position.set(...target);
       scene.add(sl, sl.target);
       lightPool.push(sl);
@@ -141,13 +147,14 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
     // Light the subject and backdrop roughly as the studio does (not exact: this is a
     // view of the set, not the portrait).
     const resolved = resolveLights(s).filter((x) => x.role !== "reflector");
+    lightPool.forEach((sl) => { sl.intensity = 0; });
     const maxE = Math.max(1e-6, ...resolved.map((L) => L.intensity / Math.max(0.2, dist2(L.position, L.target))));
     resolved.forEach((L, i) => {
       const sl = lightPool[s.lights.findIndex((x) => x.id === L.id)];
       if (!sl) return;
       sl.color.setRGB(...L.color, THREE.LinearSRGBColorSpace);
-      sl.intensity = (L.intensity / maxE) * dist2(L.position, L.target) * 6;
-      sl.angle = Math.min(Math.PI / 2.2, (L.coneDeg * Math.PI) / 180);
+      sl.intensity = (L.intensity / maxE) * dist2(L.position, L.target) * 9;
+      sl.angle = Math.min(Math.PI / 2.2, (2 * L.coneDeg * Math.PI) / 180);   // spill reaches about twice the beam angle
     });
     s.lights.forEach((l, i) => { if (!l.on && lightPool[i]) lightPool[i].intensity = 0; });
     const mat = materials(s);
@@ -339,7 +346,7 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
     canvas,
     update(s, sel) {
       state = s; selected = sel;
-      const sig = JSON.stringify([s.lights.map((l) => [l.id, l.role, l.fixture, l.modifier, l.on, l.azimuthDeg, l.elevationDeg, l.distance, l.flood, l.shutters, l.flag, l.sizeOverride, l.gel, l.color, l.kelvin]),
+      const sig = JSON.stringify([s.lights.map((l) => [l.id, l.role, l.fixture, l.modifier, l.on, l.azimuthDeg, l.elevationDeg, l.distance, l.flood, l.shutters, l.flag, l.sizeOverride, l.gel, l.color, l.kelvin, l.aim]),
         s.reflectors, s.backdrop.distance]);
       if (sig !== gearSig) { gearSig = sig; rebuildGear(s); }
       updateGear(s);

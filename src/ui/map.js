@@ -4,7 +4,7 @@
 //
 // Keyboard: Tab moves between lights. Arrow keys move the focused one (Shift for small
 // steps). + and - change power. Space turns a light on or off. Delete removes it.
-import { mapPoint, fromMapPoint, backdropLightPosition, lightSpec } from "../scene/lightmath.js";
+import { mapPoint, fromMapPoint, backdropLightPosition, lightSpec, lightAim, lightPosition } from "../scene/lightmath.js";
 import { ROLES } from "../scene/schema.js";
 import { fixture, reflectorItem } from "../scene/gear.js";
 
@@ -136,14 +136,14 @@ export function createMap(container, { onMove, onPower, onToggle, onSelect, onEn
     return (l) => out[l.id];
   }
 
-  function drawBeam(m, x, z, width, on, cls) {
-    const ang = Math.atan2(-z, -x), px = -Math.sin(ang), pz = Math.cos(ang), h = width / 2;
+  function drawBeam(m, x, z, width, on, cls, tx = 0, tz = 0) {
+    const ang = Math.atan2(tz - z, tx - x), px = -Math.sin(ang), pz = Math.cos(ang), h = width / 2;
     m.size.setAttribute("x1", (px * h).toFixed(3)); m.size.setAttribute("y1", (pz * h).toFixed(3));
     m.size.setAttribute("x2", (-px * h).toFixed(3)); m.size.setAttribute("y2", (-pz * h).toFixed(3));
     const ex = x + px * h, ez = z + pz * h, fx = x - px * h, fz = z - pz * h, sx = px * 0.12, sz = pz * 0.12;
-    m.beam.setAttribute("d", `M${ex.toFixed(3)},${ez.toFixed(3)} L${sx.toFixed(3)},${sz.toFixed(3)} L${(-sx).toFixed(3)},${(-sz).toFixed(3)} L${fx.toFixed(3)},${fz.toFixed(3)} Z`);
+    m.beam.setAttribute("d", `M${ex.toFixed(3)},${ez.toFixed(3)} L${(tx + sx).toFixed(3)},${(tz + sz).toFixed(3)} L${(tx - sx).toFixed(3)},${(tz - sz).toFixed(3)} L${fx.toFixed(3)},${fz.toFixed(3)} Z`);
     m.beam.setAttribute("class", `beam ${cls}${on ? "" : " off"}`);
-    m.ray.setAttribute("x1", x); m.ray.setAttribute("y1", z); m.ray.setAttribute("x2", 0); m.ray.setAttribute("y2", 0);
+    m.ray.setAttribute("x1", x); m.ray.setAttribute("y1", z); m.ray.setAttribute("x2", tx); m.ray.setAttribute("y2", tz);
     m.ray.setAttribute("class", `ray ${cls}${on ? "" : " off"}`);
   }
 
@@ -169,7 +169,7 @@ export function createMap(container, { onMove, onPower, onToggle, onSelect, onEn
       m.letter.setAttribute("font-size", ROLES[l.role].letter.length > 1 || number(l) ? "0.14" : "0.2");
       m.letter.setAttribute("y", l.role === "back" ? 0.04 : l.role === "hair" ? -0.04 : 0);
       if (isBg) { m.size.setAttribute("x1", 0); m.size.setAttribute("x2", 0); m.beam.setAttribute("d", ""); m.ray.setAttribute("class", "ray hidden"); }
-      else drawBeam(m, x, z, lightSpec(l, s).size, l.on, l.role);
+      else { const t = lightAim(l, s, lightPosition(l)); drawBeam(m, x, z, lightSpec(l, s).size, l.on, l.role, t[0], t[2]); }
     }
     for (const r of s.reflectors) {
       const m = markers.get(r.id), item = reflectorItem(r.item);

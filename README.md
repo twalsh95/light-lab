@@ -26,8 +26,9 @@ Live at **walshclassroom.com/light-lab/**. No sign-in, and nothing is sent anywh
 - **Studio from above (map):** drag a light or reflector around the subject. Keyboard: Tab to it, arrow keys move it (Shift for small steps), `+` and `-` power, Space on or off, Delete removes it.
 - **Side view** under the map: drag the selected light up or down to change its height (arrow keys work too).
 - **Add a light** (pick the light and its job: key, fill, back, hair, accent, backdrop) or **a reflector** (white, silver, gold) under the map.
-- **Selected light:** job, on/off and remove at the top; then light, modifier, power, around, height, distance (size in Open studio; spot ↔ flood on the Fresnels). **Colour** (warm ↔ cool, RGB, gel) and **Shape the beam** (gobo, barn doors, black flag) fold open when needed. Hover over or focus a setting to see what it does.
+- **Selected light:** job, on/off and remove at the top; then light, modifier, power, around, height, distance, and **Points at** (the face or the backdrop); size in Open studio; spot ↔ flood on the Fresnels. **Fine aim** turns or tilts the light off its target (feathering). **Colour** (warm ↔ cool, RGB, gel) and **Shape the beam** (gobo, barn doors, black flag) fold open when needed. Hover over or focus a setting to see what it does.
 - **Backdrop, Subject, Camera** (folding sections): backdrop type and distance; skin tone and clothing; auto exposure, exposure compensation, white balance.
+- **Warnings** appear under the map, for example when a light stands behind the backdrop paper (it can't reach the subject).
 - **Undo / Redo:** a whole drag is one step. Ctrl+Z / Ctrl+Y (Cmd on a Mac).
 - The current setup is kept in the browser, so it's still there next time on the same computer.
 - **Quality:** Auto measures the device when the page opens, steps down if dragging gets slow, and draws one sharper frame when you stop.

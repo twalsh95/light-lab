@@ -124,7 +124,7 @@ float beamMask(int i, vec3 p, float tanA){
   float m = smoothstep(s.x - w, s.x + w, x) * (1.0 - smoothstep(s.y - w, s.y + w, x))
           * smoothstep(s.z - w, s.z + w, y) * (1.0 - smoothstep(s.w - w, s.w + w, y));
   if (uLGobo[i] > 0){
-    float T = sqrt(max(0.0, 1.0 - uLCone[i].x * uLCone[i].x)) / max(uLCone[i].x, 0.01);
+    float T = tan(min(uLCone[i].x, 1.4));
     m *= gobo(uLGobo[i], vec2(x, y) / T);
   }
   return m;
@@ -134,7 +134,10 @@ vec3 shade(vec3 p, vec3 n, vec3 v, vec3 alb, float rough, float specOn){
   for (int i = 0; i < ${MAX_LIGHTS}; i++){
     if (i >= uNumLights) break;
     vec3 toL = uLPos[i] - p; float d2 = dot(toL, toL); float d = sqrt(d2); vec3 l = toL / d;
-    float c = smoothstep(uLCone[i].x, uLCone[i].y, dot(-l, uLDir[i])); if (c <= 0.0) continue;
+    // Beam: half brightness at the published beam angle, then spill fading out by twice that.
+    float th = acos(clamp(dot(-l, uLDir[i]), -1.0, 1.0)), b = uLCone[i].x;
+    if (th >= 2.0 * b) continue;
+    float c = exp(-0.6931 * pow(th / b, 4.0)) * (1.0 - smoothstep(1.6 * b, 2.0 * b, th));
     float tanA = max(0.004, uLSize[i] * 0.5 / d);
     c *= beamMask(i, p, tanA); if (c <= 0.0) continue;
     float wrap = min(0.35, tanA * 0.6);
@@ -222,7 +225,7 @@ export function createShaderRenderer(canvas) {
     gl.uniform3fv(U.uLDir, pad((l) => l.dir, 3));
     gl.uniform3fv(U.uLCol, pad((l) => l.color.map((c) => c * l.intensity), 3));
     gl.uniform1fv(U.uLSize, pad((l) => [l.size], 1));
-    gl.uniform2fv(U.uLCone, pad((l) => [Math.cos(l.coneDeg * Math.PI / 180), Math.cos(l.coneDeg * 0.6 * Math.PI / 180)], 2));
+    gl.uniform2fv(U.uLCone, pad((l) => [Math.max(1, l.coneDeg) * Math.PI / 180, 0], 2));
     gl.uniform1iv(U.uLShadow, new Int32Array(Array.from({ length: MAX_LIGHTS }, (_, i) => (L[i] && L[i].shadow ? 1 : 0))));
     gl.uniform4fv(U.uLShut, pad((l) => [l.shutters.xmin, l.shutters.xmax, l.shutters.ymin, l.shutters.ymax], 4));
     gl.uniform1iv(U.uLGobo, new Int32Array(Array.from({ length: MAX_LIGHTS }, (_, i) => (L[i] ? L[i].gobo || 0 : 0))));
