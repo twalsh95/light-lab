@@ -1,6 +1,7 @@
 // Settings panels: Studio (mode, add gear), the selected light or reflector,
 // Subject, Backdrop and Camera. Every number has a slider and a number box, so students
 // can drag or type: the same goal, different means.
+import { goboThumb } from "../render/gobos.js";
 import { ROLES, SIDES, LIMITS, makeLight, makeReflector, newId } from "../scene/schema.js";
 import { gear, fixture, modifier, reflectorItem, inventory, inventoryProblems, remaining, cameras, cameraGear, cameraView, lensesFor } from "../scene/gear.js";
 import { lightSpec, sceneWarnings } from "../scene/lightmath.js";
@@ -180,8 +181,14 @@ export function createPanels(els, history, { onSelect, announce }) {
     if (modifier(l.modifier).gels) out.colour.push(selectRow({ key: "gel", label: "Gel", options: Object.entries(G().gels).map(([k, g]) => [k, g.name]),
       get: () => findLight(history.state)?.gel, set: (v) => change((st) => { findLight(st).gel = v; }) }));
     // Shaping the beam
-    if (modifier(l.modifier).gobo) out.beam.push(selectRow({ key: "gobo", label: "Gobo", hint: "A metal pattern that projects shapes with the light.",
-      options: Object.entries(G().gobos).map(([k, g]) => [k, g.name]), get: () => findLight(history.state)?.gobo, set: (v) => change((st) => { findLight(st).gobo = v; }) }));
+    if (modifier(l.modifier).gobo) {
+      const r = selectRow({ key: "gobo", label: "Gobo", hint: "A metal pattern that projects shapes with the light.",
+        options: Object.entries(G().gobos).map(([k, g]) => [k, g.name]), get: () => findLight(history.state)?.gobo, set: (v) => change((st) => { findLight(st).gobo = v; }) });
+      const thumb = h("span", { class: "gobo-thumb", "aria-hidden": "true" });
+      r.row.insertBefore(thumb, r.row.querySelector("select").nextSibling);
+      let shown = null;
+      out.beam.push({ row: r.row, update(st) { r.update(st); const id = findLight(st)?.gobo; if (id !== shown) { shown = id; thumb.replaceChildren(goboThumb(id, 48)); } } });
+    }
     if (f.barnDoors && l.role !== "backdrop") {
       for (const side of Object.keys(SIDES)) out.beam.push(numberRow({ key: "bd-" + side, label: "Door: " + SIDES[side].toLowerCase(), hint: "Fold a barn door in to cut light off that side of the beam.",
         min: 0, max: LIMITS.cut[1], step: 1, unit: "%", scale: 100,

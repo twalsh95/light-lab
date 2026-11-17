@@ -106,6 +106,29 @@ await test("every gobo in the gear list has a pattern in the 3D view", () => {
     ok(L.resolveLights(s)[0].gobo > 0, g);
   }
 });
+const Gb = await import("../src/render/gobos.js");
+await test("the gobo list is Tom's set of 25 plus underwater, and every one is drawn", () => {
+  same(Object.keys(gear().gobos), Gb.GOBO_IDS);
+  ok(Gb.GOBO_IDS.length === 26);
+  for (let n = 1; n <= 26; n++) {
+    let lit = 0; for (let i = -10; i <= 10; i++) for (let j = -10; j <= 10; j++) lit += Gb.goboSample(n, i / 10, j / 10);
+    ok(lit > 5 && lit < 400, Gb.GOBO_IDS[n - 1] + " lit " + lit.toFixed(1));
+  }
+});
+await test("gobo shapes: four-pane window has dark bars and lit panes; no light outside the gobo", () => {
+  const w = Gb.GOBO_IDS.indexOf("window") + 1;
+  ok(Gb.goboSample(w, 0, 0.3) < 0.1 && Gb.goboSample(w, 0.2, 0) < 0.1, "bars");
+  ok(Gb.goboSample(w, 0.2, 0.33) > 0.9 && Gb.goboSample(w, -0.2, -0.33) > 0.9, "panes");
+  ok(Gb.goboSample(w, 1.3, 0) === 0, "outside");
+  const slot = Gb.GOBO_IDS.indexOf("slot") + 1;
+  ok(Gb.goboSample(slot, 0.4, 0) > 0.9 && Gb.goboSample(slot, 0, 0.3) < 0.1, "slot is horizontal");
+});
+await test("setup files with the old gobo names still open", () => {
+  for (const [old, now] of Object.entries(Gb.GOBO_ALIASES)) {
+    const s = normalize({ ...keyOnly({ fixture: "cb60-rgb", modifier: "gobo" }), lights: [{ ...keyOnly().lights[0], fixture: "cb60-rgb", modifier: "gobo", gobo: old }] });
+    ok(s.lights[0].gobo === now, old + " -> " + s.lights[0].gobo);
+  }
+});
 await test("Switti S45 RGB uses its published specs", () => {
   const f = fixture("s45-rgb");
   ok(f.luxAt1m === 2050 && f.kelvin[0] === 2600 && f.kelvin[1] === 10000 && f.rgb && f.dimmable);

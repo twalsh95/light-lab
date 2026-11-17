@@ -13,7 +13,7 @@ Live at **walshclassroom.com/light-lab/**. No sign-in, and nothing is sent anywh
 | 0 | Plan | Approved Nov 16 2026 (`docs/LIGHT_LAB_PHASE0_PLAN.md`) |
 | 1 | Rendering spike | Done: renderer B chosen (`docs/PHASE1_SPIKE_RESULTS.md`, test page in `spike/`) |
 | 2 | Core sandbox | Approved Nov 16 2026 |
-| 3 | Gear and modifiers | Approved Nov 16 2026 (`docs/PHASE3_GEAR_NOTES.md`: remaining estimates, gobo set still to match) |
+| 3 | Gear and modifiers | Approved Nov 16 2026 (`docs/PHASE3_GEAR_NOTES.md`: remaining estimates; gobos matched to Tom's set Nov 17 2026) |
 | 4 | UI pass (first), then the learning layer | Approved Nov 17 2026: UI pass, learning layer, classifier thresholds (`docs/PHASE4_CLASSIFIER.md`) and content |
 | 5+ | Accounts, class mode, … | Not started |
 
@@ -52,7 +52,8 @@ src/scene/            Scene model: schema.js (presets, cleaning input, files), h
                       exposure, colour, reflectors, barn doors, aim), camera.js (aperture, shutter,
                       ISO, Auto, meter), head.js (the clay model)
 src/render/           shader.js (portrait, plus the lens pass: depth of field and grain), fallback2d.js
-                      (simple view), quality.js (auto quality), beammask.js (barn doors/flags/gobos for 3D)
+                      (simple view), quality.js (auto quality), beammask.js (barn doors/flags/gobos for 3D),
+                      gobos.js (the 25 stock gobos plus underwater, drawn once and shared by both views)
 src/ui/               map.js (top-down map), studio3d.js (3D studio view), sideview.js (height), chips.js (light chips),
                       camerabar.js (Auto/Manual, aperture, shutter, ISO, meter),
                       panels.js (settings panels), snapshot.js (PNG and PDF)

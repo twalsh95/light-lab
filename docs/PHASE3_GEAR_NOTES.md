@@ -16,17 +16,9 @@
   - S45 softbox: 40 cm
   - Umbrellas: 33 in
   - Flags: 24×36 in
-- **Gobos:** a standard stock set, plus an underwater gobo and extra windows and blinds. The app offers:
-  - window
-  - small-pane window
-  - arched window
-  - blinds
-  - wide blinds
-  - dots
-  - diagonal bars
-  - underwater
+- **Gobos:** Tom's stock set of 25, matched to his photo of the set (Nov 17 2026): arched window, rain (broken lines), sun rays, starburst, crescent moon, fan blinds, horizontal slot, broken rays, angled window, palm leaves, blinds, slanted blinds, butterflies, stars, two hearts, dot swirl, triangle, vertical slit, leaves, music notes, dot grid, halftone dots, four-pane window, heart, circle. Plus the underwater gobo (its pattern is a guess).
 
-  These are close matches, not exact copies.
+  They're drawn in `src/render/gobos.js` to match the photo, not copied from it. Older setup files with the earlier guessed names (small-pane window, wide blinds, diagonal bars) open with the closest real gobo.
 
 ## Still estimates
 

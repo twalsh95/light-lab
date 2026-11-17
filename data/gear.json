@@ -338,29 +338,84 @@
     }
   },
   "gobos": {
-    "window": {
-      "name": "Window (four panes)"
-    },
-    "window-small": {
-      "name": "Window (small panes)"
-    },
     "window-arched": {
       "name": "Arched window"
+    },
+    "rain": {
+      "name": "Rain (broken lines)"
+    },
+    "sun-rays": {
+      "name": "Sun rays"
+    },
+    "starburst": {
+      "name": "Starburst"
+    },
+    "moon": {
+      "name": "Crescent moon"
+    },
+    "fan": {
+      "name": "Fan blinds"
+    },
+    "slot": {
+      "name": "Horizontal slot"
+    },
+    "shards": {
+      "name": "Broken rays"
+    },
+    "window-angled": {
+      "name": "Window (angled)"
+    },
+    "palm": {
+      "name": "Palm leaves"
     },
     "blinds": {
       "name": "Blinds"
     },
-    "blinds-wide": {
-      "name": "Blinds (wide slats)"
+    "blinds-slanted": {
+      "name": "Slanted blinds"
+    },
+    "butterflies": {
+      "name": "Butterflies"
+    },
+    "stars": {
+      "name": "Stars"
+    },
+    "hearts": {
+      "name": "Two hearts"
+    },
+    "dot-swirl": {
+      "name": "Dot swirl"
+    },
+    "triangle": {
+      "name": "Triangle"
+    },
+    "slit": {
+      "name": "Vertical slit"
+    },
+    "leaves": {
+      "name": "Leaves"
+    },
+    "music": {
+      "name": "Music notes"
     },
     "dots": {
-      "name": "Dots"
+      "name": "Dot grid"
     },
-    "branches": {
-      "name": "Diagonal bars"
+    "halftone": {
+      "name": "Halftone dots"
+    },
+    "window": {
+      "name": "Window (four panes)"
+    },
+    "heart": {
+      "name": "Heart"
+    },
+    "circle": {
+      "name": "Circle"
     },
     "underwater": {
-      "name": "Underwater (water ripples)"
+      "name": "Underwater (water ripples)",
+      "estimate": true
     }
   },
   "reflectors": {
@@ -514,5 +569,5 @@
       ]
     }
   },
-  "gobosNote": "Tom has a standard stock set, an underwater gobo, and extra windows and blinds. Patterns are close matches, not exact copies."
+  "gobosNote": "Tom's stock set of 25 (matched to his photo of the set, Nov 17 2026), plus the underwater gobo. Patterns are drawn to match, not exact copies; the underwater pattern is a guess. Drawings: src/render/gobos.js."
 }

@@ -3,6 +3,7 @@
 //
 // Version 2 (Phase 3): each light is a real fixture from data/gear.json with a modifier.
 // Units: metres and degrees. power 0..1.
+import { GOBO_ALIASES } from "../render/gobos.js";
 import { gear, fixture, modifier, reflectorItem, cameras } from "./gear.js";
 import { SHUTTERS, ISOS, snap, aperturesFor } from "./camera.js";
 
@@ -185,7 +186,7 @@ export function normalize(input) {
       kelvin: num(g.kelvin, f.kelvin, f.kelvin[0] === f.kelvin[1] ? f.kelvin[0] : 5600),
       color: { mode: f.rgb && g.color?.mode === "rgb" ? "rgb" : "white", hue: num(g.color?.hue, LIMITS.hue, 30), sat: num(g.color?.sat, LIMITS.sat, 1) },
       gel: oneOf(g.gel, G.gels, "none"),
-      gobo: oneOf(g.gobo, G.gobos, "window"),
+      gobo: oneOf(GOBO_ALIASES[g.gobo] || g.gobo, G.gobos, "window"),
       flood: num(g.flood, LIMITS.flood, 0.5),
       shutters: { top: num(sh.top, LIMITS.cut, 0), bottom: num(sh.bottom, LIMITS.cut, 0), camera: num(sh.camera, LIMITS.cut, 0), backdrop: num(sh.backdrop, LIMITS.cut, 0) },
       flag: g.flag && SIDES[g.flag.side] ? { side: g.flag.side, amount: num(g.flag.amount, LIMITS.cut, 0.5) } : null,

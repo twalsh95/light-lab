@@ -4,6 +4,7 @@
 // World: metres, y up, face centre at the origin, camera on +z looking toward -z.
 // azimuthDeg 0 = on the camera axis, negative = camera-left (-x). elevationDeg 0 = level.
 // Intensity unit: 1.0 = 10,000 lux at 1 m on the beam axis.
+import { GOBO_IDS } from "../render/gobos.js";
 import { SKIN } from "./head.js";
 import { gear, fixture, modifier, reflectorItem, cameraGear } from "./gear.js";
 import { autoSettings, exposureFromSettings, aperturesFor, snap } from "./camera.js";
@@ -133,7 +134,7 @@ function shutterLimits(l, dir, coneDeg) {
   };
 }
 
-const GOBO_INDEX = { window: 1, blinds: 2, dots: 3, branches: 4, "window-small": 5, "window-arched": 6, "blinds-wide": 7, underwater: 8 };
+const GOBO_INDEX = Object.fromEntries(GOBO_IDS.map((id, i) => [id, i + 1]));
 
 // Every light the renderers draw: fixtures, plus reflectors bouncing light back.
 export function resolveLights(state) {
