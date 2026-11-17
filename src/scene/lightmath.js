@@ -6,7 +6,7 @@
 // Intensity unit: 1.0 = 10,000 lux at 1 m on the beam axis.
 import { SKIN } from "./head.js";
 import { gear, fixture, modifier, reflectorItem, cameraGear } from "./gear.js";
-import { autoSettings, exposureFromSettings, aperturesFor } from "./camera.js";
+import { autoSettings, exposureFromSettings, aperturesFor, snap } from "./camera.js";
 
 const rad = (d) => (d * Math.PI) / 180;
 export const deg = (r) => (r * 180) / Math.PI;
@@ -230,8 +230,11 @@ export function meterFace(state) {
 export function cameraSettings(state) {
   const c = state.camera;
   if (c.mode === "manual") return { aperture: c.aperture, shutter: c.shutter, iso: c.iso };
-  const g = cameraGear(state);
-  return autoSettings(meterFace(state), c.evCompensation || 0, aperturesFor(g.lens, g.focal), g.body.iso);
+  const g = cameraGear(state), stops = aperturesFor(g.lens, g.focal);
+  // A fully manual lens (aperture ring, no electronic contacts): the camera can't change
+  // its aperture, so Auto keeps whatever the ring is set to and picks shutter and ISO.
+  const apertures = g.lens.manualAperture ? [snap(stops, c.aperture)] : stops;
+  return autoSettings(meterFace(state), c.evCompensation || 0, apertures, g.body.iso);
 }
 // Display multiplier: correct exposure puts the lit side of a mid-grey face at about 0.8.
 export function exposureFor(state) {

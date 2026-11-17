@@ -70,6 +70,10 @@ export function createCameraBar(el, history, { announce }) {
       const pick = (sel, v) => { const opts = [...sel.options].map((o) => +o.value); let best = opts[0], d = Infinity; for (const x of opts) { const e = Math.abs(Math.log2(x) - Math.log2(v)); if (e < d) { d = e; best = x; } } sel.value = String(best); };
       pick(ap.sel, cur.aperture); pick(sh.sel, cur.shutter); pick(iso.sel, cur.iso);
       for (const f of [ap, sh, iso]) { f.sel.disabled = !manual; f.wrap.classList.toggle("auto", !manual); }
+      // A manual lens's aperture ring works in Auto too: the camera can't set it.
+      const ring = !!cameraGear(s).lens.manualAperture;
+      if (ring) { ap.sel.disabled = false; ap.wrap.classList.remove("auto"); }
+      ap.wrap.querySelector(".cam-label").textContent = ring ? "Aperture (ring)" : "Aperture";
       ev.wrap.hidden = manual;
       const evv = s.camera.evCompensation || 0;
       [...ev.sel.options].forEach((o) => { if (Math.abs(+o.value - evv) < 0.01) ev.sel.value = o.value; });
@@ -82,7 +86,9 @@ export function createCameraBar(el, history, { announce }) {
       const label = Math.abs(stops) < 1 / 6 ? "0" : thirds(Math.max(-9, Math.min(9, stops)));
       const g = cameraGear(s);
       let note = `${apertureLabel(cur.aperture, g.lens.tStop)}, ${shutterLabel(cur.shutter)} s, ISO ${cur.iso}. Meter: ${label} (${word}).`;
-      if (!manual && stops < -0.5 - Math.abs(evv) && stops < evv - 0.4) note += " Too dark for Auto: add light, or use Manual with a slower shutter or higher ISO.";
+      if (!manual && ring) note += " Manual lens: you set the aperture on its ring; the camera picks shutter and ISO.";
+      if (!manual && stops < -0.5 - Math.abs(evv) && stops < evv - 0.4) note += " Too dark for Auto: add light, open the aperture, or use Manual with a slower shutter or higher ISO.";
+      if (!manual && stops > 0.5 + Math.abs(evv) && stops > evv + 0.4) note += " Too bright: even the fastest shutter can't cut it enough. Close the aperture or turn the lights down.";
       meterText.textContent = note;
       meter.setAttribute("aria-label", `Light meter: ${label} stops, ${word}`);
     },

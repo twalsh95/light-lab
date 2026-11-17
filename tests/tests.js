@@ -190,6 +190,13 @@ await test("a longer lens blurs the backdrop more at the same aperture (same fra
   s.camera.focalMm = 200; const long = backdropBlur(s);
   ok(long > short * 1.3, `${short} ${long}`);
 });
+await test("Auto can't change a manual lens's aperture: it keeps the ring setting and adjusts shutter and ISO", () => {
+  const s = PRESETS.threePoint.build(); Object.assign(s.camera, { mode: "auto", body: "sony-a65", lens: "rokinon-85", focalMm: 85, aperture: 2 });
+  const a = L.cameraSettings(s); ok(a.aperture === 2, "ring at T2: " + JSON.stringify(a));
+  s.camera.aperture = 11; const b = L.cameraSettings(s); ok(b.aperture === 11 && b.shutter > a.shutter, "ring at T11: " + JSON.stringify(b));
+  near(Cam.meterStops(b, L.meterFace(s)), 0, 0.22, "still correctly exposed");
+  s.camera.lens = "rokinon-14"; s.camera.focalMm = 14; s.camera.aperture = 1.8; ok(L.cameraSettings(s).aperture === 3.1, "can't open past T3.1");
+});
 await test("cine lenses show T-stops", () => { ok(Cam.apertureLabel(1.5, true) === "T1.5" && Cam.apertureLabel(5.6) === "f/5.6"); });
 await test("a softbox is a bigger (softer) light than the CB60's bare reflector", () => {
   const s = keyOnly(), a = makeLight({ fixture: "cb60-rgb", modifier: "cb60-softbox" }), b = makeLight({ fixture: "cb60-rgb", modifier: "cb60-reflector" });
