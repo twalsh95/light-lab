@@ -2,7 +2,8 @@
 // PNG or a one-page PDF (for Google Classroom). Made entirely in the browser.
 import { ROLES } from "../scene/schema.js";
 import { gear, fixture, modifier, reflectorItem } from "../scene/gear.js";
-import { lightSpec, mapPoint, backdropLightPosition, lightAim, lightPosition } from "../scene/lightmath.js";
+import { lightSpec, mapPoint, backdropLightPosition, lightAim, lightPosition, cameraSettings } from "../scene/lightmath.js";
+import { apertureLabel, shutterLabel } from "../scene/camera.js";
 import { SHAPE_PATHS, MAP_VIEW } from "./map.js";
 
 const W = 1650, H = 1275;   // US Letter, landscape, at 150 dpi
@@ -38,7 +39,9 @@ export function settingsLines(s) {
   const bd = s.backdrop.type === "custom" ? `grey ${Math.round(s.backdrop.brightness * 100)}%` : G.backdrops[s.backdrop.type].name.toLowerCase();
   lines.push(`Backdrop: ${bd}, ${s.backdrop.distance.toFixed(1)} m behind the subject`);
   lines.push(`Subject: ${G.skins[s.subject.skin].name.toLowerCase()} skin, ${G.clothing[s.subject.clothing].name.toLowerCase()}`);
-  lines.push(`Camera: ${s.camera.autoExposure ? "auto exposure" : "manual exposure"}${s.camera.evCompensation ? `, ${s.camera.evCompensation > 0 ? "+" : ""}${s.camera.evCompensation} EV` : ""}, ${s.camera.whiteBalance} white balance`);
+  const cs = cameraSettings(s);
+  lines.push(`Camera: ${s.camera.mode === "manual" ? "Manual" : "Auto"}, ${apertureLabel(cs.aperture)}, ${shutterLabel(cs.shutter)} s, ISO ${cs.iso}` +
+    `${s.camera.mode !== "manual" && s.camera.evCompensation ? `, ${s.camera.evCompensation > 0 ? "+" : ""}${Math.round(s.camera.evCompensation * 10) / 10} EV` : ""}, ${s.camera.whiteBalance} white balance`);
   return lines;
 }
 

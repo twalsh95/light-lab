@@ -41,7 +41,7 @@ button.preset { border-color: var(--key); }
 .card { background: var(--panel); border: 1.5px solid var(--line); padding: 12px 14px; }
 .card h2 { font-size: 15px; margin-bottom: 8px; }
 /* Square, and never taller than the screen leaves room for (a 768 px Chromebook screen). */
-.view { width: min(100%, calc(100vh - 190px)); min-width: 260px; aspect-ratio: 1; margin: 0 auto; background: #000; border: 1.5px solid var(--line); }
+.view { width: min(100%, calc(100vh - 250px)); min-width: 260px; aspect-ratio: 1; margin: 0 auto; background: #000; border: 1.5px solid var(--line); }
 .portrait { display: block; width: 100%; height: 100%; }
 .quality { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
 select { background: var(--ink); border: 1.5px solid var(--line); padding: 6px 8px; min-height: 40px; }
@@ -226,6 +226,37 @@ details.section[open] > summary::before { content: "▾"; }
 .row label { cursor: help; }
 .row label, .rowlabel { text-decoration: underline dotted var(--line); text-underline-offset: 3px; }
 .row.check label, .row.text .rowlabel { text-decoration: none; cursor: default; }
+
+/* Compare and bigger view */
+.view-tools { display: flex; gap: 4px; margin-left: auto; }
+button.small { min-height: 30px; padding: 3px 9px; font-size: 13px; }
+button.small[aria-pressed="true"] { background: var(--key); color: var(--ink); border-color: var(--key); }
+.view { position: relative; }
+.before-img { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cmp-tag { position: absolute; top: 6px; padding: 2px 6px; font-size: 12px; font-weight: 700; background: rgba(14,15,18,0.8); }
+.cmp-tag.before { left: 6px; } .cmp-tag.now { right: 6px; }
+.view.comparing::after { content: ""; position: absolute; top: 0; bottom: 0; left: var(--wipe, 50%); width: 2px; margin-left: -1px; background: var(--key); pointer-events: none; }
+.compare-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 6px; font-size: 13px; }
+.compare-bar input { flex: 1 1 8rem; accent-color: var(--key); }
+/* Bigger: the camera card fills the window over everything else. */
+body.view-big { overflow: hidden; }
+body.view-big .view-card { position: fixed; inset: 0; z-index: 50; overflow: auto; border: 0; background: var(--ink); padding: 12px max(16px, calc((100vw - min(100vh - 150px, 100vw - 32px)) / 2)); }
+body.view-big .view { width: min(100%, calc(100vh - 150px)); }
+body.view-big .note { display: none; }
+
+/* Camera bar under the portrait */
+.camerabar { margin-top: 8px; }
+.cam-row { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: end; }
+.cam-field { display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
+.cam-field select { min-height: 32px; padding: 3px 6px; font-size: 14px; }
+.cam-field.auto select { opacity: 0.6; }
+.cam-meter { margin-top: 8px; }
+.meter { position: relative; height: 26px; border: 1.5px solid var(--line); background: var(--ink); }
+.meter-scale { display: flex; justify-content: space-between; padding: 0 4%; font-size: 11px; color: var(--muted); line-height: 24px; }
+.meter-scale .zero { color: var(--text); font-weight: 700; }
+.meter-needle { position: absolute; top: -3px; bottom: -3px; width: 4px; margin-left: -2px; background: var(--key); }
+.meter.off-scale .meter-needle { background: var(--back); }
+.meter-text { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
 
 /* 3D studio view */
 button.seg.small { min-height: 30px; padding: 3px 9px; font-size: 13px; }

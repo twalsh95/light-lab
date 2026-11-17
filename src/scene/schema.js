@@ -3,7 +3,8 @@
 //
 // Version 2 (Phase 3): each light is a real fixture from data/gear.json with a modifier.
 // Units: metres and degrees. power 0..1.
-import { gear, fixture, modifier, reflectorItem } from "./gear.js";
+import { gear, fixture, modifier, reflectorItem, cameras } from "./gear.js";
+import { APERTURES, SHUTTERS, ISOS, snap } from "./camera.js";
 
 export const VERSION = 2;
 
@@ -54,7 +55,8 @@ export function blankScene() {
     version: VERSION,
     mode: "room",
     subject: { model: "clay-head", skin: "clay", clothing: "match" },
-    camera: { autoExposure: true, evCompensation: 0, manualExposure: 1, whiteBalance: "daylight" },
+    // mode "auto" lets the camera choose aperture, shutter and ISO; "manual" uses these.
+    camera: { mode: "auto", aperture: 5.6, shutter: 1 / 60, iso: 100, evCompensation: 0, whiteBalance: "daylight", body: "generic-apsc", lens: "generic-85" },
     backdrop: { type: "white", brightness: 0.5, distance: 1.0 },
     room: { ambient: 0.006 },
     lights: [],
@@ -119,7 +121,7 @@ function fromV1(input) {
   s.mode = "open";
   const b = input.backdrop || {};
   s.backdrop = { type: "custom", brightness: num(b.brightness, LIMITS.brightness, 0.5), distance: num(b.distance, LIMITS.backdropDistance, 0.9) };
-  s.camera = Object.assign(s.camera, input.camera || {});
+  s.camera.evCompensation = num(input.camera?.evCompensation, LIMITS.ev, 0);
   s.room.ambient = num(input.room?.ambient, [0, 0.5], 0.012);
   for (const l of input.lights || []) {
     if (!l || !ROLES[l.role]) continue;
@@ -144,9 +146,15 @@ export function normalize(input) {
   s.subject.skin = oneOf(sub.skin, G.skins, "clay");
   s.subject.clothing = oneOf(sub.clothing, G.clothing, "match");
   const c = input.camera || {};
-  s.camera.autoExposure = typeof c.autoExposure === "boolean" ? c.autoExposure : true;
+  const C = cameras();
+  s.camera.body = C.bodies[c.body] ? c.body : C.default.body;
+  s.camera.lens = C.lenses[c.lens] ? c.lens : C.default.lens;
+  const body = C.bodies[s.camera.body], lens = C.lenses[s.camera.lens];
+  s.camera.mode = c.mode === "manual" ? "manual" : "auto";
   s.camera.evCompensation = num(c.evCompensation, LIMITS.ev, 0);
-  s.camera.manualExposure = num(c.manualExposure, [0.01, 1000], 1);
+  s.camera.aperture = snap(APERTURES.filter((a) => a >= lens.aperture[0] && a <= lens.aperture[1]), num(c.aperture, [0.5, 64], 5.6));
+  s.camera.shutter = snap(SHUTTERS.filter((t) => t <= body.shutter[0] && t >= body.shutter[1]), num(c.shutter, [1e-5, 60], 1 / 60));
+  s.camera.iso = snap(ISOS.filter((i) => i >= body.iso[0] && i <= body.iso[1]), num(c.iso, [25, 102400], 100));
   s.camera.whiteBalance = ["daylight", "tungsten", "auto"].includes(c.whiteBalance) ? c.whiteBalance : "daylight";
   const b = input.backdrop || {};
   s.backdrop.type = b.type === "custom" ? "custom" : oneOf(b.type, G.backdrops, "white");

@@ -7,6 +7,7 @@
 //
 // three.js loads only when this view is first opened (it isn't needed for the portrait).
 import { HEAD, UNIT, featureHeight } from "../scene/head.js";
+import { drawBeamMask, plainBeam } from "../render/beammask.js";
 import { ROLES } from "../scene/schema.js";
 import { fixture, modifier, reflectorItem } from "../scene/gear.js";
 import { resolveLights, lightPosition, backdropLightPosition, lightAim, materials, lightSpec, sub, add, norm, scale } from "../scene/lightmath.js";
@@ -98,7 +99,7 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
     lightsGroup.traverse((o) => { o.geometry?.dispose(); const m = o.material; if (m) { m.map?.dispose(); m.dispose(); } });
     lightsGroup.clear();
     pickables.length = 0;
-    lightPool.forEach((l) => { scene.remove(l, l.target); l.dispose?.(); });
+    lightPool.forEach((l) => { scene.remove(l, l.target); l.map?.dispose(); l.dispose?.(); });
     lightPool.length = 0;
     let bg = 0;
     for (const l of s.lights) {
@@ -155,6 +156,16 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
       sl.color.setRGB(...L.color, THREE.LinearSRGBColorSpace);
       sl.intensity = (L.intensity / maxE) * dist2(L.position, L.target) * 9;
       sl.angle = Math.min(Math.PI / 2.2, (2 * L.coneDeg * Math.PI) / 180);   // spill reaches about twice the beam angle
+      // Barn doors, flags and gobos: project the same beam shape the portrait uses.
+      if (plainBeam(L)) { if (sl.map) { sl.map = null; sl.userData.maskKey = null; } return; }
+      const key = JSON.stringify([L.shutters, L.gobo, L.coneDeg, L.size, sl.angle, L.target, L.position]);
+      if (sl.userData.maskKey !== key) {
+        sl.userData.maskKey = key;
+        sl.map?.dispose();
+        const tex = new THREE.CanvasTexture(drawBeamMask(L, sl.angle));
+        tex.colorSpace = THREE.SRGBColorSpace;
+        sl.map = tex;
+      }
     });
     s.lights.forEach((l, i) => { if (!l.on && lightPool[i]) lightPool[i].intensity = 0; });
     const mat = materials(s);

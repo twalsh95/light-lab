@@ -4,7 +4,8 @@
 // and distance (a cone of half-angle atan(radius / distance)), so big + close = soft,
 // small + far = hard, and a shadow softens the farther it falls from what casts it.
 import { CAMERA, HEAD, UNIT, SKIN } from "../scene/head.js";
-import { resolveLights, exposureFor, materials, whiteBalanceGain } from "../scene/lightmath.js";
+import { resolveLights, exposureFor, materials, whiteBalanceGain, cameraSettings } from "../scene/lightmath.js";
+import { cameraGear } from "../scene/gear.js";
 
 export const LEVELS = {
   low:    { scale: 0.5,  steps: 48, shadowSteps: 20 },
@@ -16,6 +17,51 @@ const MAX_LIGHTS = 10;
 const VERT = `#version 300 es
 in vec2 aPos; out vec2 vUv;
 void main(){ vUv = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }`;
+
+// Lens pass: the camera focuses on the face. The backdrop, farther away, blurs by the
+// lens's circle of confusion (bigger at wide apertures like f/1.8, small at f/16).
+// High ISO adds grain, mostly visible in the darker tones.
+const LENS_FRAG = `#version 300 es
+precision highp float;
+in vec2 vUv; out vec4 outColor;
+uniform sampler2D uTex; uniform vec2 uRes; uniform float uRadius; uniform float uGrain;
+float hash(vec2 p){ p = fract(p * vec2(443.897, 441.423)); p += dot(p, p.yx + 19.19); return fract((p.x + p.y) * p.x); }
+void main(){
+  vec4 c = texture(uTex, vUv);
+  vec3 col = c.rgb;
+  if (c.a < 0.5 && uRadius > 0.6){
+    // Gather backdrop samples in a disc (golden-angle spiral), skipping the subject so it
+    // doesn't smear into the background.
+    vec3 sum = c.rgb; float wsum = 1.0;
+    for (int i = 1; i < 40; i++){
+      float r = sqrt(float(i) / 40.0) * uRadius;
+      float a = float(i) * 2.39996;
+      vec4 s = texture(uTex, vUv + vec2(cos(a), sin(a)) * r / uRes);
+      float w = 1.0 - s.a;
+      sum += s.rgb * w; wsum += w;
+    }
+    col = sum / wsum;
+  }
+  if (uGrain > 0.0){
+    float n = hash(gl_FragCoord.xy) + hash(gl_FragCoord.xy + 17.3) - 1.0;   // roughly bell-shaped
+    float l = dot(col, vec3(0.2126, 0.7152, 0.0722));
+    col += n * uGrain * (0.45 + 0.55 * (1.0 - l));
+  }
+  outColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+}`;
+
+// How much the backdrop blurs, as a fraction of the picture's height (circle of confusion
+// for a lens focused on the face, 2.2 m away).
+export function backdropBlur(state) {
+  const { aperture } = cameraSettings(state), { body, lens } = cameraGear(state);
+  const f = lens.focalMm / 1000, s = 2.2, d = s + state.backdrop.distance;
+  const cocMm = (f * f / (aperture * (s - f))) * (Math.abs(d - s) / d) * 1000;
+  return cocMm / body.sensorHeightMm;
+}
+// Grain strength for an ISO: none at base ISO, clearly visible by 3200-6400.
+export function grainFor(iso) {
+  return iso <= 200 ? 0 : 0.014 * Math.log2(iso / 200);
+}
 
 const f4 = (v) => v.toFixed(4);
 const vec3 = (a) => `vec3(${a.map(f4).join(",")})`;
@@ -182,7 +228,7 @@ void main(){
     col = shade(ro + rd * tb, vec3(0.0, 0.0, 1.0), -rd, uBackAlb, 1.0, 0.0);
   }
   // Linear values shown directly, then clipped: the contrasty look of the reference renders.
-  outColor = vec4(clamp(col * uExposure * uWB, 0.0, 1.0), 1.0);
+  outColor = vec4(clamp(col * uExposure * uWB, 0.0, 1.0), hit ? 1.0 : 0.0);   // alpha: 1 = subject (in focus)
 }`;
 }
 
@@ -197,6 +243,42 @@ export function createShaderRenderer(canvas) {
   const buf = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+
+  // The scene is drawn into a texture first, then the lens pass draws it to the screen.
+  let target = null;
+  function offscreen(px) {
+    if (target && target.px === px) return target;
+    if (target) { gl.deleteTexture(target.tex); gl.deleteFramebuffer(target.fb); }
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, px, px, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    return (target = { tex, fb, px });
+  }
+  let lensProg = null;
+  function lens() {
+    if (lensProg) return lensProg;
+    const sh = (type, src) => {
+      const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error("The 3D view couldn't start on this device (" + gl.getShaderInfoLog(s) + ").");
+      return s;
+    };
+    const p = gl.createProgram();
+    gl.attachShader(p, sh(gl.VERTEX_SHADER, VERT));
+    gl.attachShader(p, sh(gl.FRAGMENT_SHADER, LENS_FRAG));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error("The 3D view couldn't start on this device.");
+    const U = {};
+    for (const n of ["uTex", "uRes", "uRadius", "uGrain"]) U[n] = gl.getUniformLocation(p, n);
+    return (lensProg = { p, U, loc: gl.getAttribLocation(p, "aPos") });
+  }
 
   function program(level) {
     if (programs[level]) return programs[level];
@@ -254,12 +336,29 @@ export function createShaderRenderer(canvas) {
       if (canvas.width !== px) { canvas.width = px; canvas.height = px; }
       const { p, U, loc } = program(level);
       const t0 = performance.now();
+      const tgt = offscreen(px);
+      // 1) The lit scene, into the texture.
+      gl.bindFramebuffer(gl.FRAMEBUFFER, tgt.fb);
       gl.viewport(0, 0, px, px);
       gl.useProgram(p);
       gl.bindBuffer(gl.ARRAY_BUFFER, buf);
       gl.enableVertexAttribArray(loc);
       gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
       upload(U, state, px, px);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      // 2) The lens: backdrop blur and grain, onto the screen.
+      const L = lens();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, px, px);
+      gl.useProgram(L.p);
+      gl.enableVertexAttribArray(L.loc);
+      gl.vertexAttribPointer(L.loc, 2, gl.FLOAT, false, 0, 0);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, tgt.tex);
+      gl.uniform1i(L.U.uTex, 0);
+      gl.uniform2f(L.U.uRes, px, px);
+      gl.uniform1f(L.U.uRadius, Math.min(60, (backdropBlur(state) * px) / 2));   // radius in pixels
+      gl.uniform1f(L.U.uGrain, grainFor(cameraSettings(state).iso));
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       // Reading one pixel back forces the frame to finish, so the timing is real.
       if (measure) { gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4)); return performance.now() - t0; }

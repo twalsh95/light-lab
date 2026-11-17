@@ -2,7 +2,7 @@
 // Subject, Backdrop and Camera. Every number has a slider and a number box, so students
 // can drag or type: the same goal, different means.
 import { ROLES, SIDES, LIMITS, makeLight, makeReflector, newId } from "../scene/schema.js";
-import { gear, fixture, modifier, reflectorItem, inventory, inventoryProblems, remaining } from "../scene/gear.js";
+import { gear, fixture, modifier, reflectorItem, inventory, inventoryProblems, remaining, cameras } from "../scene/gear.js";
 import { lightSpec, sceneWarnings } from "../scene/lightmath.js";
 
 let uid = 0;
@@ -292,13 +292,16 @@ export function createPanels(els, history, { onSelect, announce }) {
     min: LIMITS.backdropDistance[0], max: LIMITS.backdropDistance[1], step: 0.05, unit: "m", get: (s) => s.backdrop.distance, set: grouped((s, v) => { s.backdrop.distance = v; }, "bd-dist") });
   els.backdrop.append(bdRow, bdBright.row, bdDist.row, h("p", { class: "hint" }, "To light the backdrop itself, add a light with the role Backdrop light."));
 
-  const ae = checkRow({ key: "ae", label: "Auto exposure (works like a light meter at the face)", get: (s) => s.camera.autoExposure, set: (v) => change((s) => { s.camera.autoExposure = v; }) });
-  const ev = numberRow({ key: "ev", label: "Exposure", hint: "Brighter or darker than the camera's own choice, in stops.", min: LIMITS.ev[0], max: LIMITS.ev[1], step: 0.1, unit: "EV",
-    get: (s) => s.camera.evCompensation, set: grouped((s, v) => { s.camera.evCompensation = Math.round(v * 10) / 10; }, "ev") });
+  // Aperture, shutter, ISO and Auto/Manual live in the camera bar under the portrait.
+  const bodyRow = selectRow({ key: "body", label: "Camera", options: Object.entries(cameras().bodies).map(([k, v]) => [k, v.name]),
+    get: (s) => s.camera.body, set: (v) => change((s) => { s.camera.body = v; }) });
+  const lensRow = selectRow({ key: "lens", label: "Lens", options: Object.entries(cameras().lenses).map(([k, v]) => [k, v.name]),
+    hint: "The lens sets how much the backdrop blurs at a given aperture. The framing stays head and shoulders.",
+    get: (s) => s.camera.lens, set: (v) => change((s) => { s.camera.lens = v; }) });
   const wb = selectRow({ key: "wb", label: "White balance", options: [["daylight", "Daylight (5600 K)"], ["tungsten", "Tungsten (3200 K)"], ["auto", "Auto (match the key light)"]],
     hint: "What the camera treats as white. Lights warmer than this look orange; cooler ones look blue.",
     get: (s) => s.camera.whiteBalance, set: (v) => change((s) => { s.camera.whiteBalance = v; }) });
-  els.camera.append(ae.row, ev.row, wb.row);
+  els.camera.append(bodyRow.row, lensRow.row, wb.row);
 
   return {
     get selected() { return selected; },
@@ -329,7 +332,7 @@ export function createPanels(els, history, { onSelect, announce }) {
       bdType.value = s.backdrop.type;
       bdBright.row.hidden = s.backdrop.type !== "custom";
       bdBright.update(s); bdDist.update(s);
-      ae.update(s); ev.update(s); wb.update(s);
+      bodyRow.update(s); lensRow.update(s); wb.update(s);
     },
   };
 }

@@ -27,7 +27,10 @@ Live at **walshclassroom.com/light-lab/**. No sign-in, and nothing is sent anywh
 - **Side view** under the map: drag the selected light up or down to change its height (arrow keys work too).
 - **Add a light** (pick the light and its job: key, fill, back, hair, accent, backdrop) or **a reflector** (white, silver, gold) under the map.
 - **Selected light:** job, on/off and remove at the top; then light, modifier, power, around, height, distance, and **Points at** (the face or the backdrop); size in Open studio; spot ↔ flood on the Fresnels. **Fine aim** turns or tilts the light off its target (feathering). **Colour** (warm ↔ cool, RGB, gel) and **Shape the beam** (gobo, barn doors, black flag) fold open when needed. Hover over or focus a setting to see what it does.
-- **Backdrop, Subject, Camera** (folding sections): backdrop type and distance; skin tone and clothing; auto exposure, exposure compensation, white balance.
+- **Camera bar** under the portrait: **Auto** (the camera picks aperture, shutter and ISO; exposure compensation brightens or darkens) or **Manual** (students pick all three). A meter scale shows how many stops brighter or darker than correct the picture is. The numbers are real: they follow the photographic exposure formula with the real light levels in lux, so they're the settings a real camera in the room would need. A wide aperture blurs the backdrop (depth of field, focused on the face); high ISO adds grain. Shutter speed only changes brightness here (the subject is still).
+- **Compare:** freezes the current picture; change something, then slide between Before and Now. "Use before setup" goes back to the frozen setup (Undo returns).
+- **Bigger:** enlarges the camera view to fill the window (Esc to close), for the projector or a close look.
+- **Backdrop, Subject, Camera** (folding sections): backdrop type and distance; skin tone and clothing; camera body and lens (`data/cameras.json`, a typical camera until the room's cameras are listed), white balance.
 - **Warnings** appear under the map, for example when a light stands behind the backdrop paper (it can't reach the subject).
 - **Undo / Redo:** a whole drag is one step. Ctrl+Z / Ctrl+Y (Cmd on a Mac).
 - The current setup is kept in the browser, so it's still there next time on the same computer.
@@ -40,12 +43,16 @@ Live at **walshclassroom.com/light-lab/**. No sign-in, and nothing is sent anywh
 index.html            The app page (loads /platform/wc.js for the Walsh Classroom bar)
 src/main.js           Start-up and wiring
 src/app.css           Styles
-data/gear.json        Tom's real gear, stations, gels, gobos, skin and clothing presets (edit here, not in code)
+data/gear.json        Tom's real gear, gels, gobos, skin and clothing presets (edit here, not in code)
+data/cameras.json     Camera bodies and lenses (ISO, shutter and aperture ranges, sensor size, focal length)
 src/scene/            Scene model: schema.js (presets, cleaning input, files), history.js (undo),
                       gear.js (gear list, Room-mode inventory), lightmath.js (positions, falloff,
-                      exposure, colour, reflectors, barn doors), head.js (the clay model)
-src/render/           shader.js (3D view), fallback2d.js (simple view), quality.js (auto quality)
+                      exposure, colour, reflectors, barn doors, aim), camera.js (aperture, shutter,
+                      ISO, Auto, meter), head.js (the clay model)
+src/render/           shader.js (portrait, plus the lens pass: depth of field and grain), fallback2d.js
+                      (simple view), quality.js (auto quality), beammask.js (barn doors/flags/gobos for 3D)
 src/ui/               map.js (top-down map), studio3d.js (3D studio view), sideview.js (height), chips.js (light chips),
+                      camerabar.js (Auto/Manual, aperture, shutter, ISO, meter),
                       panels.js (settings panels), snapshot.js (PNG and PDF)
 tests/index.html      Browser tests and a preset-vs-reference sheet (open from a local server)
 tests/app.html        The app with a timer-driven loop, for testing in a background tab

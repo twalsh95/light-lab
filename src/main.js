@@ -29,6 +29,7 @@ const { createPanels } = await import("./ui/panels.js");
 const { composeSnapshot, snapshotPdf } = await import("./ui/snapshot.js");
 const { createChips } = await import("./ui/chips.js");
 const { createSideView } = await import("./ui/sideview.js");
+const { createCameraBar } = await import("./ui/camerabar.js");
 
 // ---------- State ----------
 let initial;
@@ -150,6 +151,51 @@ async function setStudioView(v) {
 }
 for (const b of document.querySelectorAll("#viewToggle [data-view]")) b.addEventListener("click", () => setStudioView(b.dataset.view));
 
+const camBar = createCameraBar($("camerabar"), history, { announce });
+
+// ---------- Bigger view ----------
+function setBig(on) {
+  document.body.classList.toggle("view-big", on);
+  $("bigBtn").setAttribute("aria-pressed", on ? "true" : "false");
+  $("bigBtn").textContent = on ? "✕ Smaller" : "⤢ Bigger";
+  dirty = true;
+  requestAnimationFrame(() => { dirty = true; });
+}
+$("bigBtn").addEventListener("click", () => setBig(!document.body.classList.contains("view-big")));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("view-big")) setBig(false); });
+
+// ---------- Compare: freeze a picture, change something, slide between before and now ----------
+let frozen = null;
+function setWipe(v) {
+  $("view").style.setProperty("--wipe", v + "%");
+  $("beforeImg").style.clipPath = `inset(0 ${100 - v}% 0 0)`;
+}
+function startCompare() {
+  renderer.render(history.state, quality.still, cssSize());
+  frozen = { src: canvas.toDataURL("image/png"), state: JSON.parse(JSON.stringify(history.state)) };
+  dirty = true;
+  $("beforeImg").src = frozen.src;
+  for (const id of ["beforeImg", "beforeTag", "nowTag", "compareBar"]) $(id).hidden = false;
+  $("view").classList.add("comparing");
+  $("compareBtn").setAttribute("aria-pressed", "true");
+  $("wipe").value = 50; setWipe(50);
+  announce("Picture frozen. Change something, then slide between Before and Now.");
+}
+function stopCompare() {
+  frozen = null;
+  for (const id of ["beforeImg", "beforeTag", "nowTag", "compareBar"]) $(id).hidden = true;
+  $("view").classList.remove("comparing");
+  $("compareBtn").setAttribute("aria-pressed", "false");
+}
+$("compareBtn").addEventListener("click", () => (frozen ? stopCompare() : startCompare()));
+$("stopCompare").addEventListener("click", stopCompare);
+$("wipe").addEventListener("input", () => setWipe(+$("wipe").value));
+$("restoreBefore").addEventListener("click", () => {
+  if (!frozen) return;
+  history.replace(frozen.state);
+  announce("Back to the setup you froze. Undo returns to the newer one.");
+});
+
 // Our room / Open studio, in the header.
 for (const b of document.querySelectorAll("#modeToggle [data-mode]")) {
   b.addEventListener("click", () => {
@@ -170,6 +216,7 @@ function refresh() {
   panels.update(s);
   map.update(s, panels.selected);
   chips.update(s, panels.selected);
+  camBar.update(s);
   side.update(s, panels.selected);
   if (studio3d && studioView === "3d") studio3d.update(s, panels.selected);
   for (const b of document.querySelectorAll("#modeToggle [data-mode]")) b.setAttribute("aria-checked", b.dataset.mode === s.mode ? "true" : "false");

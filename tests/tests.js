@@ -6,7 +6,8 @@ await loadGear();
 const { PRESETS, normalize, serialize, parse, blankScene, makeLight, makeReflector, VERSION } = await import("../src/scene/schema.js");
 const { createHistory } = await import("../src/scene/history.js");
 const L = await import("../src/scene/lightmath.js");
-const { createShaderRenderer } = await import("../src/render/shader.js");
+const { createShaderRenderer, backdropBlur, grainFor } = await import("../src/render/shader.js");
+const Cam = await import("../src/scene/camera.js");
 const { createFallbackRenderer } = await import("../src/render/fallback2d.js");
 const { composeSnapshot, snapshotPdf } = await import("../src/ui/snapshot.js");
 
@@ -122,13 +123,44 @@ await test("inverse-square: twice as far = a quarter of the light", () => near(f
 await test("angle of incidence: a surface turned 60° away gets half the light", () => {
   near(faceE(keyOnly(), [Math.sin(Math.PI / 3), 0, 0.5]) / faceE(keyOnly()), 0.5, 1e-9);
 });
-await test("auto exposure keeps the lit side steady; manual shows 2 stops for double distance", () => {
-  const a = keyOnly(), b = keyOnly({ distance: 3 });
-  near(L.exposureFor(a) * L.meterFace(a), L.exposureFor(b) * L.meterFace(b), 1e-9);
-  const m1 = keyOnly(), m2 = keyOnly({ distance: 2 }); m1.camera.autoExposure = m2.camera.autoExposure = false;
-  near(Math.log2(L.meterFace(m1) / L.meterFace(m2)), 2, 0.01);
+await test("Auto keeps the lit side steady (to within the camera's third-stop steps)", () => {
+  for (const d of [0.6, 1, 1.7, 3]) {
+    const s = keyOnly({ distance: d });
+    near(Cam.meterStops(L.cameraSettings(s), L.meterFace(s)), 0, 0.22, `at ${d} m`);
+  }
 });
-await test("a dark studio stays dark", () => { const s = blankScene(); ok(L.exposureFor(s) * L.meterFace(s) < 0.16); });
+await test("Manual with fixed settings: twice as far = 2 stops darker", () => {
+  const m1 = keyOnly(), m2 = keyOnly({ distance: 2 });
+  for (const m of [m1, m2]) Object.assign(m.camera, { mode: "manual", aperture: 8, shutter: 1 / 60, iso: 200 });
+  near(Math.log2((L.exposureFor(m1) * L.meterFace(m1)) / (L.exposureFor(m2) * L.meterFace(m2))), 2, 0.01);
+});
+await test("exposure triangle: each setting changes brightness by the right number of stops", () => {
+  const base = { aperture: 8, shutter: 1 / 60, iso: 200 }, e = Cam.exposureFromSettings;
+  near(Math.log2(e({ ...base, shutter: 1 / 30 }) / e(base)), 1, 1e-9, "shutter twice as long");
+  near(Math.log2(e({ ...base, iso: 400 }) / e(base)), 1, 1e-9, "ISO doubled");
+  near(Math.log2(e({ ...base, aperture: 5.6 }) / e(base)), 1, 0.05, "one stop wider (f-numbers are rounded)");
+});
+await test("Auto picks real-world settings for the three-point preset (about f/5.6, a usable shutter, low ISO)", () => {
+  const c = L.cameraSettings(PRESETS.threePoint.build());
+  ok(c.aperture >= 2.8 && c.aperture <= 8 && c.shutter <= 1 / 15 && c.shutter >= 1 / 500 && c.iso <= 400, JSON.stringify(c));
+});
+await test("the meter reads 0 when Manual uses Auto's settings, and +1 a stop brighter", () => {
+  const s = PRESETS.threePoint.build(), auto = L.cameraSettings(s), E = L.meterFace(s);
+  near(Cam.meterStops(auto, E), 0, 0.2);
+  near(Cam.meterStops({ ...auto, shutter: auto.shutter * 2 }, E) - Cam.meterStops(auto, E), 1, 1e-9);
+});
+await test("in a nearly dark studio, Auto has to raise ISO (and so adds grain)", () => {
+  const c = L.cameraSettings(blankScene());
+  ok(c.iso >= 400 && grainFor(c.iso) > 0, JSON.stringify(c));
+});
+await test("a wide aperture blurs the backdrop much more than a small one, and more when it's farther back", () => {
+  const s = keyOnly(); s.camera.mode = "manual"; s.backdrop.distance = 1;
+  s.camera.aperture = 1.8; const wide = backdropBlur(s);
+  s.camera.aperture = 8; const narrow = backdropBlur(s);
+  s.backdrop.distance = 2.5; const far = backdropBlur(s);
+  ok(wide > narrow * 4 && far > narrow, `${wide} ${narrow} ${far}`);
+});
+await test("no grain at ISO 100, clear grain by ISO 6400", () => { ok(grainFor(100) === 0 && grainFor(6400) > 0.06); });
 await test("a softbox is a bigger (softer) light than the CB60's bare reflector", () => {
   const s = keyOnly(), a = makeLight({ fixture: "cb60-rgb", modifier: "cb60-softbox" }), b = makeLight({ fixture: "cb60-rgb", modifier: "cb60-reflector" });
   ok(L.lightSpec(a, s).size > L.lightSpec(b, s).size * 2);
@@ -265,6 +297,15 @@ await test("the 3D studio view draws every fixture, modifier and reflector witho
     v.update(s, "x");
   }
   v.dispose(); box.remove();
+});
+await test("the 3D view's beam mask matches the portrait: a top barn door darkens the top of the beam", async () => {
+  const { drawBeamMask, plainBeam } = await import("../src/render/beammask.js");
+  const s = keyOnly({ fixture: "fresnel-650", modifier: "fresnel-lens", flood: 1, shutters: { top: 0.6, bottom: 0, camera: 0, backdrop: 0 } });
+  const Lt = L.resolveLights(s)[0];
+  ok(!plainBeam(Lt), "has a mask");
+  const c = drawBeamMask(Lt, (2 * Lt.coneDeg * Math.PI) / 180, 64), d = c.getContext("2d").getImageData(0, 0, 64, 64).data;
+  const at = (x, y) => d[(y * 64 + x) * 4];
+  ok(at(32, 8) < 40 && at(32, 56) > 200, `top ${at(32, 8)}, bottom ${at(32, 56)}`);
 });
 await test("the snapshot PDF is a real one-page PDF", async () => {
   const portrait = document.createElement("canvas"); portrait.width = portrait.height = 64;

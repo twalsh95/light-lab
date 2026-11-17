@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "notes": [
+    "Cameras and lenses for Light Lab. Tom will list the room's real cameras; until then there is one typical camera.",
+    "sensorHeightMm sets how much the background blurs (depth of field). The framing in the app stays the same (head and shoulders) whatever the lens."
+  ],
+  "bodies": {
+    "generic-apsc": {
+      "name": "Typical camera (APS-C sensor)",
+      "sensorHeightMm": 15.6,
+      "iso": [100, 6400],
+      "shutter": [30, 0.00025],
+      "source": "Typical entry-level interchangeable-lens camera. Placeholder until Tom lists the room's cameras."
+    }
+  },
+  "lenses": {
+    "generic-85": {
+      "name": "85 mm f/1.8 portrait lens",
+      "focalMm": 85,
+      "aperture": [1.8, 22],
+      "source": "A common portrait lens. Placeholder until Tom lists the room's lenses."
+    }
+  },
+  "default": { "body": "generic-apsc", "lens": "generic-85" }
+}

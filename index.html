@@ -46,6 +46,10 @@
   <section class="card view-card" aria-labelledby="viewTitle">
     <div class="card-head">
       <h2 id="viewTitle">Camera view</h2>
+      <span class="view-tools">
+        <button id="compareBtn" type="button" class="small" aria-pressed="false" title="Freeze this picture, then change something and compare">Compare</button>
+        <button id="bigBtn" type="button" class="small" aria-pressed="false" title="Make the camera view bigger (Esc to close)">⤢ Bigger</button>
+      </span>
       <span id="qualityRow" class="quality">
         <label for="quality">Quality</label>
         <select id="quality" aria-describedby="qualityNote">
@@ -57,7 +61,19 @@
         <span id="qualityNote" class="visually-hidden"></span>
       </span>
     </div>
-    <div id="view" class="view"><canvas id="portrait" class="portrait" role="img"></canvas></div>
+    <div id="view" class="view">
+      <canvas id="portrait" class="portrait" role="img"></canvas>
+      <img id="beforeImg" class="before-img" alt="" hidden>
+      <span id="beforeTag" class="cmp-tag before" hidden>Before</span>
+      <span id="nowTag" class="cmp-tag now" hidden>Now</span>
+    </div>
+    <div id="compareBar" class="compare-bar" hidden>
+      <label for="wipe">Before ↔ Now</label>
+      <input id="wipe" type="range" min="0" max="100" value="50" aria-label="Slide between the before and now pictures">
+      <button id="restoreBefore" type="button" class="small" title="Go back to the setup you froze (Undo returns)">Use before setup</button>
+      <button id="stopCompare" type="button" class="small">Done</button>
+    </div>
+    <div id="camerabar" class="camerabar" aria-label="Camera settings"></div>
     <p class="note">A simplified studio: real skin, hair and lights are more complicated. Build your instincts here, then check them at the stations.</p>
   </section>
 

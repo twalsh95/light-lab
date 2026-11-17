@@ -1,11 +1,21 @@
 // The gear catalogue (data/gear.json) and Room-mode inventory. Loaded once at start-up.
-let GEAR = null;
+let GEAR = null, CAMERAS = null;
 
 export async function loadGear(url = new URL("../../data/gear.json", import.meta.url)) {
-  const r = await fetch(url);
+  const [r, rc] = await Promise.all([fetch(url), fetch(new URL("../../data/cameras.json", import.meta.url))]);
   if (!r.ok) throw new Error("Couldn't load the gear list (" + r.status + ").");
+  if (!rc.ok) throw new Error("Couldn't load the camera list (" + rc.status + ").");
   GEAR = await r.json();
+  CAMERAS = await rc.json();
   return GEAR;
+}
+export function cameras() {
+  if (!CAMERAS) throw new Error("Camera list not loaded yet.");
+  return CAMERAS;
+}
+export function cameraGear(state) {
+  const C = cameras();
+  return { body: C.bodies[state.camera.body] || C.bodies[C.default.body], lens: C.lenses[state.camera.lens] || C.lenses[C.default.lens] };
 }
 export function setGear(g) { GEAR = g; }
 export function gear() {
