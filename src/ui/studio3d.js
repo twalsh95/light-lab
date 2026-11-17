@@ -102,10 +102,10 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
       const target = isBg ? [0, -0.05, -s.backdrop.distance] : [0, 0, 0];
       const g = fixtureModel(THREE, l, s, p, target);
       g.userData.id = l.id;
+      // The stand and a disc on the floor belong to the light: grab any part of it.
+      g.add(stand(THREE, p[0], FLOOR, p[2], p[1] - FLOOR - 0.08, 0x3a3d45), floorDisc(THREE, p, ROLE_COLORS[l.role] || "#ffffff", isBg));
       lightsGroup.add(g);
       pickables.push(g);
-      // Stand down to the floor (backdrop lights sit on a low floor stand).
-      lightsGroup.add(stand(THREE, p[0], FLOOR, p[2], p[1] - FLOOR - 0.08, 0x3a3d45));
       const sl = new THREE.SpotLight(0xffffff, 0, 0, Math.PI / 3, 0.5, 2);
       sl.position.set(...p); sl.target.position.set(...target);
       scene.add(sl, sl.target);
@@ -119,13 +119,20 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
       const n = strongest ? norm(add(norm(sub(strongest.position, p)), toSubject)) : toSubject;
       const color = { gold: 0xd9a63a, silver: 0xd6d9df, white: 0xf2f2f2 }[r.side] || 0xf2f2f2;
       const card = new THREE.Mesh(new THREE.PlaneGeometry(item.width, item.height), new THREE.MeshStandardMaterial({ color, roughness: r.side === "white" ? 0.9 : 0.35, metalness: r.side === "white" ? 0 : 0.6, side: THREE.DoubleSide }));
+      const cardGroup = new THREE.Group();
+      cardGroup.add(card);
+      cardGroup.position.set(...p);
+      cardGroup.lookAt(p[0] + n[0], p[1] + n[1], p[2] + n[2]);
       const g = new THREE.Group();
-      g.add(card);
-      g.position.set(...p);
-      g.lookAt(p[0] + n[0], p[1] + n[1], p[2] + n[2]);
       g.userData.id = r.id;
-      lightsGroup.add(g, stand(THREE, p[0], FLOOR, p[2], p[1] - FLOOR - item.height / 2, 0x3a3d45));
-      lightsGroup.add(label(THREE, "R", ROLE_COLORS.reflector, p[0], p[1] + item.height / 2 + 0.15, p[2], 0.22, true));
+      g.add(cardGroup, stand(THREE, p[0], FLOOR, p[2], p[1] - FLOOR - item.height / 2, 0x3a3d45),
+        label(THREE, "R", ROLE_COLORS.reflector, p[0], p[1] + item.height / 2 + 0.15, p[2], 0.22, true),
+        floorDisc(THREE, p, ROLE_COLORS.reflector, false));
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.28, 0.34, 32), new THREE.MeshBasicMaterial({ color: ROLE_COLORS.reflector, side: THREE.DoubleSide }));
+      ring.rotation.x = -Math.PI / 2; ring.position.set(p[0], FLOOR + 0.012, p[2]);
+      ring.userData.selRing = true; ring.userData.noPick = true; ring.visible = false;
+      g.add(ring);
+      lightsGroup.add(g);
       pickables.push(g);
     }
   }
@@ -178,9 +185,11 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, cam);
   }
+  let lastHitPoint = null;
   function hitId(e) {
     setRay(e);
-    const hit = ray.intersectObjects(pickables, true)[0];
+    const hit = ray.intersectObjects(pickables, true).find((h) => !h.object.userData.noPick && h.object.visible);
+    lastHitPoint = hit?.point || null;
     let o = hit?.object;
     while (o && !o.userData.id) o = o.parent;
     return o?.userData.id || null;
@@ -203,9 +212,15 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
     }
     const id = hitId(e), o = findObj(id);
     if (id) onSelect(id);
-    drag = movable(o)
-      ? { mode: e.shiftKey ? "lift" : "move", id, x: e.clientX, y: e.clientY, moved: 0, height: lightPosition(o)[1] }
-      : { mode: "orbit", x: e.clientX, y: e.clientY, moved: 0 };
+    if (movable(o)) {
+      // Track the light's base across the floor from wherever it was grabbed, so it
+      // doesn't jump: remember the gap between the grab point and the stand.
+      // Slide along a level plane through the exact point that was grabbed (head, pole or
+      // floor disc), so that point stays under the cursor.
+      const lp = lightPosition(o), planeY = lastHitPoint ? lastHitPoint.y : FLOOR, hit = onPlane(e, planeY);
+      drag = { mode: e.shiftKey ? "lift" : "move", id, x: e.clientX, y: e.clientY, moved: 0, height: lp[1], planeY,
+        offset: hit ? { x: lp[0] - hit.x, z: lp[2] - hit.z } : { x: 0, z: 0 } };
+    } else drag = { mode: "orbit", x: e.clientX, y: e.clientY, moved: 0 };
   });
   canvas.addEventListener("pointermove", (e) => {
     if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -217,7 +232,7 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
       render();
       return;
     }
-    if (!drag) return;
+    if (!drag) { hover(e); return; }
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
     if (drag.mode === "orbit") {
@@ -225,10 +240,11 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
       if (drag.moved > 5) autoFit = false;
       render();
     } else if (drag.mode === "move") {
-      const p = onPlane(e, drag.height);
-      if (!p) return;
-      const h = Math.max(0.3, Math.min(4, Math.hypot(p.x, p.z)));
-      onMove(drag.id, place(Math.atan2(p.x, p.z), h, drag.height), "drag3d-" + drag.id);
+      const hit = onPlane(e, drag.planeY);
+      if (!hit) return;
+      const x = hit.x + drag.offset.x, z = hit.z + drag.offset.z;
+      const h = Math.max(0.3, Math.min(4, Math.hypot(x, z)));
+      onMove(drag.id, place(Math.atan2(x, z), h, drag.height), "drag3d-" + drag.id);
     } else {
       // Raise or lower: about 1 m per 200 px, keeping the same spot on the floor.
       const o = findObj(drag.id);
@@ -240,9 +256,22 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
   const release = (e) => {
     pointers.delete(e.pointerId);
     if (pointers.size < 2) pinch = null;
-    if (drag && drag.mode !== "orbit" && drag.moved > 0) onEndGroup();
+    if (drag && drag.mode !== "orbit" && drag.moved > 0) { onEndGroup(); autoFit = false; }
     drag = null;
   };
+  // Show a move cursor over anything that can be dragged (checked at most once a frame).
+  let hoverQueued = false, lastHover = null;
+  function hover(e) {
+    lastHover = e;
+    if (hoverQueued || e.pointerType === "touch") return;
+    hoverQueued = true;
+    requestAnimationFrame(() => {
+      hoverQueued = false;
+      const o = findObj(hitId(lastHover));
+      canvas.style.cursor = movable(o) ? "move" : "";
+    });
+  }
+  canvas.addEventListener("pointerleave", () => { canvas.style.cursor = ""; });
   canvas.addEventListener("pointerup", release);
   canvas.addEventListener("pointercancel", release);
   // Azimuth (radians), horizontal distance and height -> the app's light controls.
@@ -272,7 +301,8 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
     return { x: n ? Math.max(-1, Math.min(1, (sumX / n) * 0.5)) : 0, radius: Math.max(5.6, Math.min(12, 2.6 + far * 2.5)), far };
   }
   function fit() {
-    if (!autoFit || !state) return;
+    // Never re-frame while something is being dragged: the scene would slide under the cursor.
+    if (!autoFit || !state || drag) return;
     const f = fitted();
     view.target.x = f.x; view.radius = f.radius;
   }
@@ -319,9 +349,10 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
     resetView() { reset(); render(); },
     goTo,
     // Where a light appears on screen (page coordinates); used by the tests.
-    project(id) {
+    project(id, y) {
       const o = findObj(id); if (!o) return null;
-      const v = new THREE.Vector3(...lightPosition(o)).project(cam), r = canvas.getBoundingClientRect();
+      const p = lightPosition(o);
+      const v = new THREE.Vector3(p[0], y ?? p[1], p[2]).project(cam), r = canvas.getBoundingClientRect();
       return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
     },
     dispose() { renderer.dispose(); canvas.remove(); },
@@ -427,6 +458,7 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
       beam.position.set(...add(p, scale(sub(target, p), 0.46)));
       beam.lookAt(...target);
       beam.rotateX(-Math.PI / 2);
+      beam.userData.noPick = true;
       g.add(beam);
     }
     const letter = ROLES[l.role].letter;
@@ -434,7 +466,7 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
     // Selection ring on the floor.
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.28, 0.34, 32), new THREE.MeshBasicMaterial({ color: roleColor, side: THREE.DoubleSide }));
     ring.rotation.x = -Math.PI / 2; ring.position.set(p[0], FLOOR + 0.01, p[2]);
-    ring.userData.selRing = true; ring.visible = false;
+    ring.userData.selRing = true; ring.userData.noPick = true; ring.visible = false;
     g.add(ring);
     return g;
 
@@ -446,6 +478,14 @@ export async function createStudio3D(container, { onSelect, onMove = () => {}, o
   }
 }
 
+// A disc on the floor under a light: the easiest thing to grab when moving it around.
+function floorDisc(THREE, p, color, dim) {
+  const d = new THREE.Mesh(new THREE.CircleGeometry(0.26, 32), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: dim ? 0.12 : 0.28, depthWrite: false, side: THREE.DoubleSide }));
+  d.rotation.x = -Math.PI / 2;
+  d.position.set(p[0], FLOOR + 0.006, p[2]);
+  return d;
+}
+
 function dist2(a, b) { const d = sub(a, b); return d[0] * d[0] + d[1] * d[1] + d[2] * d[2]; }
 
 function stand(THREE, x, floorY, z, height, color) {
@@ -455,6 +495,10 @@ function stand(THREE, x, floorY, z, height, color) {
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, h, 8), mat);
   pole.position.set(x, floorY + h / 2, z);
   g.add(pole);
+  // An invisible, fatter sleeve around the pole so it's easy to grab with a mouse or finger.
+  const grab = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, h, 8), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+  grab.position.copy(pole.position);
+  g.add(grab);
   for (let i = 0; i < 3; i++) {
     const a = (i / 3) * Math.PI * 2;
     const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.42, 6), mat);
