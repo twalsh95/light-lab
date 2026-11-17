@@ -16,6 +16,7 @@
       <button type="button" role="radio" data-mode="open" class="seg">Open studio</button>
     </div>
     <div class="group" id="presets" role="group" aria-label="Presets"></div>
+    <button id="learnBtn" type="button" class="learn-btn" aria-pressed="false" aria-controls="learn">Learn</button>
     <div class="group">
       <button id="undo" type="button" title="Undo (Ctrl+Z)" aria-label="Undo">↶ Undo</button>
       <button id="redo" type="button" title="Redo (Ctrl+Y)" aria-label="Redo">↷ Redo</button>
@@ -74,6 +75,10 @@
       <button id="stopCompare" type="button" class="small">Done</button>
     </div>
     <div id="camerabar" class="camerabar" aria-label="Camera settings"></div>
+    <details id="describeBox" class="describe" open>
+      <summary>What the camera sees</summary>
+      <div id="description" aria-live="polite"></div>
+    </details>
     <p class="note">A simplified studio: real skin, hair and lights are more complicated. Build your instincts here, then check them at the stations.</p>
   </section>
 
@@ -99,6 +104,7 @@
   </section>
 
   <div class="side">
+    <section class="card learn" id="learn" aria-label="Learn" hidden></section>
     <section class="card" id="inspector" aria-label="Selected light"></section>
     <section class="card scene" aria-label="Scene">
       <details class="section" open><summary>Backdrop</summary><div id="backdrop"></div></details>

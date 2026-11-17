@@ -14,7 +14,7 @@ Live at **walshclassroom.com/light-lab/**. No sign-in, and nothing is sent anywh
 | 1 | Rendering spike | Done: renderer B chosen (`docs/PHASE1_SPIKE_RESULTS.md`, test page in `spike/`) |
 | 2 | Core sandbox | Approved Nov 16 2026 |
 | 3 | Gear and modifiers | Approved Nov 16 2026 (`docs/PHASE3_GEAR_NOTES.md`: remaining estimates, gobo set still to match) |
-| 4 | UI pass (first), then the learning layer | UI pass built, waiting for Tom's review (`docs/ui-pass/`); learning layer not started |
+| 4 | UI pass (first), then the learning layer | UI pass approved. Learning layer built: classifier thresholds (`docs/PHASE4_CLASSIFIER.md`) and all content are drafts waiting for Tom's approval |
 | 5+ | Accounts, class mode, … | Not started |
 
 ## Using it
@@ -35,6 +35,8 @@ Live at **walshclassroom.com/light-lab/**. No sign-in, and nothing is sent anywh
 - **Undo / Redo:** a whole drag is one step. Ctrl+Z / Ctrl+Y (Cmd on a Mac).
 - The current setup is kept in the browser, so it's still there next time on the same computer.
 - **Quality:** Auto measures the device when the page opens, steps down if dragging gets slow, and draws one sharper frame when you stop.
+- **Description** under the portrait: plain sentences about the setup and what the picture shows (read out by screen readers as things change). Lighting words get a dotted underline with a definition on hover or keyboard focus (`data/vocab.json`).
+- **Learn** (button in the header): guided lessons, Predict and reveal, Match the look (a hidden target setup; feedback compares measured shadow depth, backdrop brightness, rim and bright side, never pixels), Name the setup (high-key, low-key or balanced; the app measures the picture, so the answer always matches it), Progress (concept meters that grow with correct answers on different scenes, kept in this browser only), and Words. Content lives in `content/`; drafts show only with `?drafts=1`.
 - **Simple view:** devices without WebGL 2 get a 2D view automatically. `?view=simple` opens it on purpose.
 
 ## Files
@@ -54,6 +56,10 @@ src/render/           shader.js (portrait, plus the lens pass: depth of field an
 src/ui/               map.js (top-down map), studio3d.js (3D studio view), sideview.js (height), chips.js (light chips),
                       camerabar.js (Auto/Manual, aperture, shutter, ISO, meter),
                       panels.js (settings panels), snapshot.js (PNG and PDF)
+src/metrics/          metrics.js (shadow depth, backdrop, rim, bright side, colour from the picture), classify.js (high-key / low-key / balanced)
+src/learn/            content.js (loading, scenes, task checks), describe.js, vocab.js, progress.js; the Learn card is src/ui/learn.js
+content/              Lessons, predict questions, Match the look targets, Name the setup scenes (JSON; "status": "draft" until Tom approves)
+data/vocab.json       Vocabulary definitions
 tests/index.html      Browser tests and a preset-vs-reference sheet (open from a local server)
 tests/app.html        The app with a timer-driven loop, for testing in a background tab
 spike/                Phase 1 rendering test page (kept for reference)

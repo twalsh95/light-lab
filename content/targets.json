@@ -1,0 +1,56 @@
+{
+  "type": "targets",
+  "note": "Match the look targets. Each target is a hidden setup; its numbers are measured from it when the student opens it, so they always match the target picture. Scoring compares measured properties, never pixels. Drafts until Tom approves.",
+  "items": [
+    { "id": "mysterious-album-cover", "status": "draft", "title": "Mysterious album cover", "difficulty": 2, "concept": "styles",
+      "brief": "A musician wants a dark, mysterious cover: one side of the face in deep shadow, background nearly black.",
+      "targetScene": { "preset": "lowKey" },
+      "metrics": {
+        "shadowStops": { "full": 0.8, "partial": 1.6, "ifTooLow": "The shadow side is lighter than the target. What could you turn down, turn off, or move?", "ifTooHigh": "The shadow side is even darker than the target. What could add just a little light?" },
+        "backdropMean": { "full": 0.05, "partial": 0.12, "ifTooLow": "The backdrop is darker than the target. Is anything lighting it?", "ifTooHigh": "The backdrop is brighter than the target. How could you keep light off it?" },
+        "keySide": { "ifWrong": "The light comes from the other side in the target. Where should the key go?" }
+      },
+      "hints": ["The target uses only one light.", "The key is far to the side, almost 90°.", "Look at the backdrop: very dark."],
+      "careerConnection": { "title": "Album cover photographer", "text": "Music photographers light for mood first. A low-key cover can say more about a sound than the musician's face does. Art directors often ask for exactly this look, and you have to deliver it on set, fast." } },
+    { "id": "bright-yearbook", "status": "draft", "title": "Bright yearbook portrait", "difficulty": 1, "concept": "styles",
+      "brief": "School portraits need a bright, friendly look: soft even light and a white background.",
+      "targetScene": { "preset": "highKey" },
+      "metrics": {
+        "shadowStops": { "full": 0.3, "partial": 0.7, "ifTooLow": "", "ifTooHigh": "The shadows are deeper than the target. What could lift them?" },
+        "backdropMean": { "full": 0.12, "partial": 0.3, "ifTooLow": "The backdrop is darker than the target. How do you make white paper look white?", "ifTooHigh": "" },
+        "overallMean": { "full": 0.12, "partial": 0.25, "ifTooLow": "The whole picture is darker than the target. Is the camera exposing for a bright, high-key look?", "ifTooHigh": "The picture is brighter than the target. What could you bring down?" }
+      },
+      "hints": ["Two big, soft lights at the front.", "The backdrop has its own light.", "Try +½ stop of exposure compensation."],
+      "careerConnection": { "title": "School and event photographer", "text": "School photographers set up one look and repeat it for hundreds of students in a day, so the setup has to be even, flattering, and quick to check." } },
+    { "id": "actor-headshot", "status": "draft", "title": "Actor's headshot", "difficulty": 2, "concept": "roles",
+      "brief": "An actor needs a classic headshot: clear key side, gentle fill, and a rim light so they stand out from a grey background.",
+      "targetScene": { "preset": "threePoint" },
+      "metrics": {
+        "shadowStops": { "full": 0.3, "partial": 0.7, "ifTooLow": "The shadows are lighter than the target. Is the fill too strong?", "ifTooHigh": "The shadow side is darker than the target. What could you add or raise?" },
+        "backdropMean": { "full": 0.1, "partial": 0.2, "ifTooLow": "The backdrop is darker than the target. How far back is it?", "ifTooHigh": "The backdrop is brighter than the target. How far back is it, and what's lighting it?" },
+        "rimScore": { "full": 0.25, "partial": 0.5, "ifTooLow": "The target has a rim of light around the head. Which light makes that?", "ifTooHigh": "The rim is stronger than in the target." },
+        "keySide": { "ifWrong": "The key is on the other side in the target." }
+      },
+      "hints": ["Three lights: key, fill and back.", "The key is about 45° camera-left and above the face.", "The backdrop is white paper, quite far back."],
+      "careerConnection": { "title": "Headshot photographer", "text": "Casting directors look at hundreds of headshots, so actors need a clear, honest, well-lit picture. Headshot photographers often shoot three-point setups all day and adjust the fill to each face." } },
+    { "id": "film-noir", "status": "draft", "title": "Film noir detective", "difficulty": 3, "concept": "styles",
+      "brief": "A 1940s-style crime poster: hard light from the camera's right side, deep shadows, dark background.",
+      "targetScene": { "preset": "lowKey", "lights": { "key": { "azimuthDeg": 70, "flood": 0.3 } } },
+      "metrics": {
+        "shadowStops": { "full": 0.8, "partial": 1.6, "ifTooLow": "The shadows are softer and lighter than the target. What makes shadows deep and hard?", "ifTooHigh": "The shadows are even deeper than the target." },
+        "backdropMean": { "full": 0.05, "partial": 0.12, "ifTooLow": "", "ifTooHigh": "The background should be nearly black. What's lighting it?" },
+        "keySide": { "ifWrong": "In the target the light comes from the camera's right." }
+      },
+      "hints": ["One hard light.", "It's on the camera-right side this time.", "A Fresnel close to spot gives hard light."],
+      "careerConnection": { "title": "Cinematographer (director of photography)", "text": "Cinematographers design the lighting for every shot of a film. Film noir is a style built almost entirely from hard, low-key light, and it's still copied in crime dramas and music videos." } },
+    { "id": "warm-interview", "status": "draft", "title": "Warm documentary interview", "difficulty": 3, "concept": "color",
+      "brief": "A documentary wants a warm, cosy interview look: the face glowing a little orange, soft shadows.",
+      "targetScene": { "preset": "threePoint", "lights": { "key": { "kelvin": 3200 }, "fill": { "kelvin": 3500 } } },
+      "metrics": {
+        "colorCast": { "full": 0.12, "partial": 0.3, "ifTooLow": "The target looks warmer (more orange). What controls how warm a light is?", "ifTooHigh": "Your picture is warmer than the target." },
+        "shadowStops": { "full": 0.4, "partial": 0.9, "ifTooLow": "", "ifTooHigh": "The shadow side is darker than the target. What could lift it?" }
+      },
+      "hints": ["The lights are set warm, around 3200 K.", "The camera's white balance is still Daylight."],
+      "careerConnection": { "title": "Gaffer", "text": "The gaffer is the head of the lighting crew on a film or documentary. They choose the lights, gels and colour temperatures that make the look the director wants." } }
+  ]
+}

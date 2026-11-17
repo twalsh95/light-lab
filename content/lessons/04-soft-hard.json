@@ -1,0 +1,26 @@
+{
+  "type": "lessons",
+  "id": "soft-hard",
+  "status": "draft",
+  "title": "Soft vs hard: size and distance",
+  "concept": "softhard",
+  "minutes": 7,
+  "standards": ["MA GD-VC Standard 4 (lighting techniques)", "MA MP-B Standard 5 (lighting, sets and props)"],
+  "steps": [
+    { "type": "text", "text": "Soft light gives gentle shadow edges; hard light gives crisp ones. What matters is how big the light looks from the subject: big and close is soft, small and far is hard." },
+    { "type": "setup", "text": "One key light in a softbox, nothing else.", "scene": { "preset": "threePoint", "remove": ["fill", "back"] } },
+    { "type": "predict", "question": "Swap the softbox for the CB60's small standard reflector. What happens to the shadow edge under the nose?",
+      "options": ["It gets softer", "It gets harder and crisper", "It stays the same"], "answer": 1,
+      "change": { "lights": { "key": { "modifier": "cb60-reflector" } } },
+      "explain": "The reflector is a much smaller light than the softbox, so the shadow edges get sharper." },
+    { "type": "predict", "question": "Put the softbox back, then move the light from 1.5 m to 3 m away. Softer or harder?",
+      "options": ["Softer", "Harder", "No change"], "answer": 1,
+      "change": { "lights": { "key": { "modifier": "cb60-softbox", "distance": 3 } } },
+      "explain": "From farther away, the same softbox looks smaller to the subject, so it gives harder light. It's also dimmer (falloff), so the camera has to work harder." },
+    { "type": "task", "text": "Make the softest light you can with the gear in the room: try an umbrella or a softbox, and bring it close.",
+      "check": [{ "light": "key", "prop": "modifier", "in": ["umbrella-white", "umbrella-silver", "umbrella-gold", "cb60-softbox"] }, { "light": "key", "prop": "distance", "<=": 1.1 }],
+      "hint": "Pick the key light, change its modifier to the white umbrella, then drag it in close (about 1 m)." },
+    { "type": "reflect", "prompt": "When would you choose hard light on purpose? Give an example and say why.",
+      "frames": ["I'd use hard light for…", "because the crisp shadows…"] }
+  ]
+}

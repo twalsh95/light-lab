@@ -1,0 +1,18 @@
+{
+  "type": "quizzes",
+  "note": "Name the setup scenes. The answers aren't stored: the app measures each picture and the classifier decides, so the answer always matches what the picture really shows. Drafts until Tom approves.",
+  "items": [
+    { "id": "n-three-point", "status": "draft", "scene": { "preset": "threePoint" } },
+    { "id": "n-high-key", "status": "draft", "scene": { "preset": "highKey" } },
+    { "id": "n-low-key", "status": "draft", "scene": { "preset": "lowKey" } },
+    { "id": "n-trap-black", "status": "draft", "scene": { "preset": "threePoint", "backdrop": { "type": "black" } } },
+    { "id": "n-trap-white", "status": "draft", "scene": { "preset": "lowKey", "backdrop": { "type": "white", "distance": 1.2 }, "lights": { "bg": { "fixture": "s45-rgb", "role": "backdrop", "on": true, "power": 1, "kelvin": 3200 } } } },
+    { "id": "n-key-only", "status": "draft", "scene": { "preset": "threePoint", "remove": ["fill", "back"] } },
+    { "id": "n-low-key-right", "status": "draft", "scene": { "preset": "lowKey", "lights": { "key": { "azimuthDeg": 75 } } } },
+    { "id": "n-flat-dark", "status": "draft", "scene": { "preset": "highKey", "backdrop": { "type": "black" }, "remove": ["bg1"] } },
+    { "id": "n-high-key-warm", "status": "draft", "scene": { "preset": "highKey", "lights": { "key": { "kelvin": 4200 }, "fill": { "kelvin": 4200 } } } },
+    { "id": "n-three-point-green", "status": "draft", "scene": { "preset": "threePoint", "backdrop": { "type": "green", "distance": 1.0 } } },
+    { "id": "n-side-hard", "status": "draft", "scene": { "preset": "threePoint", "remove": ["fill"], "lights": { "key": { "azimuthDeg": -85, "modifier": "snoot", "distance": 1.2 } }, "backdrop": { "type": "white", "distance": 2.5 } } },
+    { "id": "n-reflector-fill", "status": "draft", "scene": { "preset": "threePoint", "remove": ["fill"], "reflectors": [{ "item": "flag-black-white", "side": "white", "azimuthDeg": 55, "distance": 0.7 }] } }
+  ]
+}

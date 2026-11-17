@@ -16,7 +16,8 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* not available: fine */ } },
 };
 
-try { await loadGear(); }
+const { loadVocab, linkify } = await import("./learn/vocab.js");
+try { await Promise.all([loadGear(), loadVocab()]); }
 catch (e) { showError("Light Lab couldn't load its gear list. Check the internet connection and reload. (" + e.message + ")"); throw e; }
 
 const { PRESETS, serialize, parse } = await import("./scene/schema.js");
@@ -30,6 +31,9 @@ const { composeSnapshot, snapshotPdf } = await import("./ui/snapshot.js");
 const { createChips } = await import("./ui/chips.js");
 const { createSideView } = await import("./ui/sideview.js");
 const { createCameraBar } = await import("./ui/camerabar.js");
+const { describe } = await import("./learn/describe.js");
+const { loadContent } = await import("./learn/content.js");
+const { createLearn } = await import("./ui/learn.js");
 
 // ---------- State ----------
 let initial;
@@ -77,6 +81,7 @@ function frame(now) {
       if (stillPending && now - lastChange > 250) {
         if (quality.still !== quality.interactive) renderer.render(s, quality.still, cssSize());
         stillPending = false; quality.idle();
+        updateDescription(s);
       }
     }
   } catch (e) {
@@ -85,6 +90,23 @@ function frame(now) {
   }
   requestAnimationFrame(frame);
 }
+
+// ---------- What the camera sees (measured once the picture settles) ----------
+let lastMetrics = null, descSig = "";
+function updateDescription(s) {
+  try { lastMetrics = renderer.measure ? renderer.measure(s) : null; } catch (e) { lastMetrics = null; }
+  if (!$("describeBox").open) { learn?.settled(); return; }
+  const lines = describe(s, lastMetrics), sig = lines.join(" ");
+  if (sig === descSig) return;
+  descSig = sig;
+  learn?.settled();
+  const box = $("description");
+  box.innerHTML = "";
+  for (const line of lines) { const p = document.createElement("p"); p.append(linkify(line)); box.append(p); }
+}
+$("describeBox").addEventListener("toggle", () => { store.set("lightlab.describe", $("describeBox").open ? "1" : "0"); if ($("describeBox").open) updateDescription(history.state); });
+if (store.get("lightlab.describe") === "0") $("describeBox").open = false;
+export const getMetrics = () => lastMetrics;
 
 // ---------- UI ----------
 function select(id) { if (panels.selected !== id) { panels.select(id); refresh(); } }
@@ -170,11 +192,13 @@ function setWipe(v) {
   $("view").style.setProperty("--wipe", v + "%");
   $("beforeImg").style.clipPath = `inset(0 ${100 - v}% 0 0)`;
 }
-function startCompare() {
-  renderer.render(history.state, quality.still, cssSize());
-  frozen = { src: canvas.toDataURL("image/png"), state: JSON.parse(JSON.stringify(history.state)) };
+function startCompare(src, label = "Before") {
+  if (!src) { renderer.render(history.state, quality.still, cssSize()); src = canvas.toDataURL("image/png"); }
+  frozen = { src, state: label === "Before" ? JSON.parse(JSON.stringify(history.state)) : null };
   dirty = true;
   $("beforeImg").src = frozen.src;
+  $("beforeTag").textContent = label;
+  $("restoreBefore").hidden = !frozen.state;
   for (const id of ["beforeImg", "beforeTag", "nowTag", "compareBar"]) $(id).hidden = false;
   $("view").classList.add("comparing");
   $("compareBtn").setAttribute("aria-pressed", "true");
@@ -188,6 +212,36 @@ function stopCompare() {
   $("compareBtn").setAttribute("aria-pressed", "false");
 }
 $("compareBtn").addEventListener("click", () => (frozen ? stopCompare() : startCompare()));
+
+// ---------- Learn ----------
+// A second renderer, off screen, draws target and quiz portraits and measures them.
+let thumb = null;
+function thumbRenderer() {
+  if (thumb) return thumb;
+  const c = document.createElement("canvas");
+  try { thumb = createShaderRenderer(c); } catch (e) { thumb = createFallbackRenderer(c); }
+  thumb.canvas = c;
+  return thumb;
+}
+let content = { lessons: [], predict: [], targets: [], quizzes: [] };
+try { content = await loadContent(); } catch (e) { console.warn("Learning content didn't load:", e); }
+let learn = null;
+function setLearn(on) {
+  $("learn").hidden = !on;
+  $("learnBtn").setAttribute("aria-pressed", on ? "true" : "false");
+  if (on && !learn) learn = createLearn($("learn"), {
+    history, content, announce,
+    metrics: () => lastMetrics,
+    measureScene: (sc) => thumbRenderer().measure(sc),
+    imageOf: (sc) => { const t = thumbRenderer(); t.render(sc, "high", 300); return t.canvas.toDataURL("image/png"); },
+    compareWith: (src, label) => { stopCompare(); startCompare(src, label); },
+    selectFirst: () => { panels.select(history.state.lights[0]?.id || null); refresh(); },
+  });
+  if (on) $("learn").scrollIntoView({ block: "nearest" });
+  store.set("lightlab.learnOpen", on ? "1" : "0");
+}
+$("learnBtn").addEventListener("click", () => setLearn($("learn").hidden));
+if (store.get("lightlab.learnOpen") === "1") setLearn(true);
 $("stopCompare").addEventListener("click", stopCompare);
 $("wipe").addEventListener("input", () => setWipe(+$("wipe").value));
 $("restoreBefore").addEventListener("click", () => {

@@ -358,7 +358,9 @@ const Mx = await import("../src/metrics/metrics.js");
 const { classify } = await import("../src/metrics/classify.js");
 const refMetrics = {};
 for (const n of ["p1_key", "p2_keyfill", "p3_three", "p4_highkey", "p5_lowkey", "p6_trap", "p7_whitebg_lowkey"]) {
-  const img = new Image(); img.src = "../docs/light-lab-reference/" + n + ".jpg"; await img.decode();
+  // onload, not img.decode(): decode() can stall in a background (hidden) tab.
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = () => rej(new Error("couldn't load " + n)); img.src = "../docs/light-lab-reference/" + n + ".jpg"; });
   refMetrics[n] = Mx.referenceMetrics(img);
 }
 await test("reference p4 is high-key", () => ok(classify(refMetrics.p4_highkey).id === "high-key", JSON.stringify(refMetrics.p4_highkey)));
@@ -399,6 +401,139 @@ if (R) {
     ok(R.measure(s).colorCast > 0.3, String(R.measure(s).colorCast));
   });
 }
+
+// ---------- Learning layer (content, checks, progress, description, vocabulary) ----------
+const C = await import("../src/learn/content.js");
+const { describe } = await import("../src/learn/describe.js");
+const V = await import("../src/learn/vocab.js");
+const Prog = await import("../src/learn/progress.js");
+const { CLASSES } = await import("../src/metrics/classify.js");
+const contentBase = new URL("../content/", location.href);
+const contentIndex = await (await fetch(new URL("index.json", contentBase))).json();
+const contentDocs = await Promise.all(contentIndex.files.map(async (f) => [f, await (await fetch(new URL(f, contentBase))).json()]));
+const allItems = contentDocs.flatMap(([f, d]) => (d.items || [d]).map((it) => ({ file: f, type: d.type, ...it })));
+const STEP_TYPES = ["text", "setup", "task", "choose", "predict", "reflect"];
+
+await test("every content file loads and every item has an id and a status", () => {
+  ok(allItems.length > 20, "only " + allItems.length);
+  for (const it of allItems) ok(it.id && ["draft", "approved"].includes(it.status), `${it.file}: ${it.id} status ${it.status}`);
+});
+await test("content ids are unique within each type", () => {
+  for (const t of ["lessons", "predict", "targets", "quizzes"]) {
+    const ids = allItems.filter((i) => i.type === t).map((i) => i.id);
+    ok(new Set(ids).size === ids.length, t);
+  }
+});
+await test("every content scene builds into a valid scene (presets, light ids, reflectors)", () => {
+  const scenes = [];
+  for (const it of allItems) {
+    for (const def of [it.scene, it.targetScene, ...(it.steps || []).map((s) => s.scene)]) if (def) scenes.push([it.id, def]);
+    if (it.change) scenes.push([it.id + " change", { ...it.scene, ...it.change, lights: { ...(it.scene?.lights || {}), ...(it.change.lights || {}) } }]);
+  }
+  for (const [id, def] of scenes) {
+    if (def.preset && def.preset !== "current") ok(PRESETS[def.preset], `${id}: unknown preset ${def.preset}`);
+    for (const lid of Object.keys(def.lights || {})) {
+      const base = (PRESETS[def.preset] || PRESETS.threePoint).build();
+      ok(base.lights.some((l) => l.id === lid) || def.lights[lid].fixture, `${id}: light "${lid}" isn't in the preset and has no fixture`);
+    }
+    const s = C.buildScene(def);
+    same(normalize(s), s, id);
+  }
+});
+await test("lesson steps are known types, and checks/answers are well formed", () => {
+  const metricKeys = Object.keys(R ? R.measure(PRESETS.threePoint.build()) : { shadowStops: 0, backdropMean: 0, rimScore: 0, keySide: 0, overallMean: 0, faceMean: 0, colorCast: 0, tintCast: 0 });
+  for (const les of allItems.filter((i) => i.type === "lessons")) {
+    ok(les.concept in Prog.CONCEPTS, les.id + " concept");
+    for (const [n, s] of les.steps.entries()) {
+      ok(STEP_TYPES.includes(s.type), `${les.id} step ${n}: ${s.type}`);
+      if (s.options) ok(Number.isInteger(s.answer) && s.answer >= 0 && s.answer < s.options.length, `${les.id} step ${n} answer`);
+      for (const c of s.check || []) {
+        if (c.metric) ok(metricKeys.includes(c.metric), `${les.id}: unknown metric ${c.metric}`);
+        if (c.class) ok(CLASSES[c.class] || Object.values(CLASSES).some((x) => x.id === c.class), `${les.id}: unknown class ${c.class}`);
+      }
+    }
+  }
+  for (const q of allItems.filter((i) => i.type === "predict")) {
+    ok(q.concept in Prog.CONCEPTS, q.id); ok(q.answer >= 0 && q.answer < q.options.length, q.id); ok(q.change, q.id + " has no change");
+  }
+  for (const t of allItems.filter((i) => i.type === "targets")) ok(t.concept in Prog.CONCEPTS && t.metrics && t.hints?.length && t.careerConnection, t.id);
+});
+await test("checks: light on/off, settings, paths, counts and the meter", () => {
+  const s = PRESETS.threePoint.build();
+  ok(C.checkAll([{ light: "fill", on: true }, { count: "lightsOn", ">=": 3 }], s));
+  ok(!C.checkAll([{ light: "fill", on: false }], s));
+  ok(C.checkAll([{ light: "key", prop: "distance", "<": 5 }, { path: "camera.mode", in: ["auto", "manual"] }], s));
+  ok(C.checkAll([{ light: "nonexistent", on: false }], s), "a missing light counts as off");
+  ok(C.checkAll([{ meter: true, ">=": -0.5, "<=": 0.5 }], s), "Auto exposes correctly");
+  ok(C.checkAll([{ metric: "shadowStops", ">": 1 }], s, { shadowStops: 2 }) && !C.checkAll([{ metric: "shadowStops", ">": 1 }], s, null));
+  ok(C.checkAll([{ class: "low-key" }], s, null, { id: "low-key" }) && !C.checkAll([{ class: "low-key" }], s, null, { id: "balanced" }));
+});
+await test("applyPatch merges light changes, removes lights and keeps the original untouched", () => {
+  const a = PRESETS.threePoint.build();
+  const b = C.applyPatch(a, { remove: ["back"], lights: { fill: { on: false }, key: { shutters: { top: 0.3 } } } });
+  ok(b.lights.length === a.lights.length - 1 && !b.lights.find((l) => l.id === "fill").on);
+  ok(a.lights.find((l) => l.id === "fill").on, "original changed");
+  ok(b.lights.find((l) => l.id === "key").shutters.top === 0.3);
+});
+// The questions' answers must be what the physics actually shows.
+await test("predict: Manual camera, key twice as far: meter drops 2 stops (the stated answer)", () => {
+  const q = allItems.find((i) => i.id === "p-key-far"), a = C.buildScene(q.scene), b = C.applyPatch(a, q.change);
+  const m = (s) => Cam.meterStops(L.cameraSettings(s), L.meterFace(s));
+  near(m(a) - m(b), 2, 0.25, "stops darker");
+});
+if (R) {
+  const pq = (id) => { const q = allItems.find((i) => i.id === id), a = C.buildScene(q.scene); return [R.measure(a), R.measure(C.applyPatch(a, q.change))]; };
+  await test("predict: turning the fill off makes the shadow side much darker", () => { const [a, b] = pq("p-fill-off"); ok(b.shadowStops > a.shadowStops + 0.7, `${a.shadowStops} -> ${b.shadowStops}`); });
+  await test("predict: back light on raises the rim", () => { const [a, b] = pq("p-back-on"); ok(b.rimScore > a.rimScore + 0.1); });
+  await test("predict: black backdrop is still balanced (backdrop is only a clue)", () => { const [, b] = pq("p-black-backdrop"); ok(classify(b).id === "balanced", JSON.stringify(b)); });
+  await test("predict: gold reflector lifts and warms the shadow side", () => { const [a, b] = pq("p-gold-reflector"); ok(b.shadowStops < a.shadowStops && b.colorCast > a.colorCast, JSON.stringify([a, b])); });
+  await test("predict: barn door on the backdrop side darkens the backdrop, not the face", () => {
+    const [a, b] = pq("p-barn-door"); ok(b.backdropMean < a.backdropMean * 0.8 && b.faceMean > a.faceMean * 0.85, JSON.stringify([a, b]));
+  });
+  await test("Match the look: each target scored against itself is a full match", () => {
+    for (const t of allItems.filter((i) => i.type === "targets")) {
+      const m = R.measure(C.buildScene(t.targetScene)), m2 = R.measure(C.buildScene(t.targetScene));
+      for (const [k, spec] of Object.entries(t.metrics)) ok(k === "keySide" ? m.keySide === m2.keySide : Math.abs(m[k] - m2[k]) <= spec.full, `${t.id} ${k}`);
+    }
+  });
+  await test("Name the setup: every quiz scene gets a class, and the traps land where intended", () => {
+    const got = Object.fromEntries(allItems.filter((i) => i.type === "quizzes").map((q) => [q.id, classify(R.measure(C.buildScene(q.scene))).id]));
+    ok(Object.values(got).every(Boolean));
+    ok(got["n-trap-black"] === "balanced" && got["n-trap-white"] === "low-key" && got["n-high-key"] === "high-key", JSON.stringify(got));
+    ok(new Set(Object.values(got)).size === 3, "the quiz should use all three answers: " + JSON.stringify(got));
+  });
+}
+await test("scene description names the lights and says when one is off", () => {
+  const s = PRESETS.threePoint.build(); s.lights.find((l) => l.id === "fill").on = false;
+  const d = describe(s, R ? R.measure(s) : null).join(" ");
+  ok(/key/i.test(d) && /fill light is off/i.test(d), d);
+  ok(/All the lights are off/.test(describe(C.applyPatch(s, { lights: { key: { on: false }, back: { on: false } } }), null).join(" ")));
+});
+await test("vocabulary: tips wrap a term's first use only, with a definition for screen readers", async () => {
+  await V.loadVocab();
+  const div = document.createElement("div");
+  div.append(V.linkify("The key light is the main light; the key light sets the mood."));
+  const tips = div.querySelectorAll(".term");
+  ok(tips.length >= 1 && [...tips].filter((t) => /^key light/i.test(t.textContent)).length === 1, div.innerHTML.slice(0, 200));
+  const t = tips[0]; ok(t.tabIndex === 0 && div.querySelector("#" + t.getAttribute("aria-describedby"))?.getAttribute("role") === "tooltip");
+});
+await test("mastery grows with different scenes, not repeats, and a recent miss holds it back", () => {
+  const KEYP = "lightlab.progress.v1"; let saved = null;
+  try { saved = localStorage.getItem(KEYP); } catch (e) { /* storage blocked */ }
+  try {
+    Prog.resetProgress();
+    for (let i = 0; i < 5; i++) Prog.record("fill", "same-scene", true);
+    ok(Prog.mastery("fill").distinct === 1 && Prog.mastery("fill").word === "started");
+    for (const id of ["a", "b", "c"]) Prog.record("fill", id, true);
+    ok(Prog.mastery("fill").word === "secure" && Prog.mastery("fill").level === 1);
+    Prog.record("fill", "d", false);
+    ok(Prog.mastery("fill").word === "building");
+    ok(Prog.mastery("color").word === "not started");
+  } finally {
+    Prog.resetProgress();
+    try { if (saved != null) localStorage.setItem(KEYP, saved); } catch (e) { /* storage blocked */ }
+  }
+});
 
 // ---------- Report ----------
 const list = document.getElementById("list");

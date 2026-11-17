@@ -1,0 +1,14 @@
+{
+  "note": "Every content file Light Lab loads. Items marked \"status\": \"draft\" are hidden from students until Tom changes them to \"approved\". Preview drafts by adding ?drafts=1 to the address.",
+  "files": [
+    "lessons/01-three-point.json",
+    "lessons/02-fill-mood.json",
+    "lessons/03-backdrop-clue.json",
+    "lessons/04-soft-hard.json",
+    "lessons/05-color-temperature.json",
+    "lessons/06-exposure.json",
+    "predict.json",
+    "targets.json",
+    "quizzes.json"
+  ]
+}

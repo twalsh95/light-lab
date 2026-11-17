@@ -1,0 +1,24 @@
+{
+  "type": "lessons",
+  "id": "backdrop-clue",
+  "status": "draft",
+  "title": "The backdrop is a clue, not the answer",
+  "concept": "reading",
+  "minutes": 6,
+  "standards": ["MA GD-VC Standard 4 (lighting techniques)"],
+  "steps": [
+    { "type": "text", "text": "To read a portrait, use three clues: 1. Shadows (deep or soft?) 2. Background (one clue only) 3. Brightest side (where is the key?). The shadows decide high-key or low-key. The backdrop is only a clue." },
+    { "type": "setup", "text": "Start from a balanced three-point setup.", "scene": { "preset": "threePoint" } },
+    { "type": "predict", "question": "Change the backdrop to black. Does the portrait become low-key?",
+      "options": ["Yes: a dark backdrop makes it low-key", "No: the shadows are still soft, so it's still balanced"], "answer": 1,
+      "change": { "backdrop": { "type": "black" } },
+      "explain": "The face is lit exactly as before, with soft shadows. A dark backdrop alone doesn't make a portrait low-key." },
+    { "type": "choose", "question": "What decides whether a portrait is low-key?", "options": ["How dark the background is", "How deep the shadows on the face are", "The colour of the light"], "answer": 1,
+      "explain": "Low-key means deep shadows and little fill. The background can be dark or light." },
+    { "type": "task", "text": "Make a low-key portrait on a WHITE backdrop: deep shadows on the face, with the paper still bright.",
+      "check": [{ "path": "backdrop.type", "eq": "white" }, { "class": "low-key" }],
+      "hint": "Turn off the fill and back lights, and move the key to the side. To keep the paper bright, add a light with the job Backdrop light." },
+    { "type": "reflect", "prompt": "A friend says \"black background means low-key\". Explain to them, using the three clues, why that isn't always true.",
+      "frames": ["The background is only…", "What really decides it is…", "For example…"] }
+  ]
+}

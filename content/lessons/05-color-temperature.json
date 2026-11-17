@@ -1,0 +1,25 @@
+{
+  "type": "lessons",
+  "id": "color-temperature",
+  "status": "draft",
+  "title": "Warm halogen, cool LED: colour temperature",
+  "concept": "color",
+  "minutes": 7,
+  "standards": ["MA GD-VC Standard 4 (lighting techniques)", "MA MP-B Standard 5 (lighting, sets and props)"],
+  "steps": [
+    { "type": "text", "text": "Halogen lights like the room's Fresnels are warm (about 3200 K). Daylight LEDs are cool (about 5600 K). The camera's white balance decides which one looks white." },
+    { "type": "setup", "text": "The halogen Fresnel as the key, with the camera set to Tungsten white balance to match it.", "scene": { "preset": "lowKey" } },
+    { "type": "predict", "question": "Switch the camera's white balance to Daylight. What colour will the face turn?",
+      "options": ["Blue", "Orange", "It won't change"], "answer": 1,
+      "change": { "camera": { "whiteBalance": "daylight" } },
+      "explain": "Halogen light is much warmer than daylight. With the camera expecting daylight, the halogen looks orange." },
+    { "type": "predict", "question": "Back to Tungsten white balance, and add a daylight-balanced CB60 (5600 K) as a fill on the other side. What colour will the fill side look?",
+      "options": ["Orange", "Blue", "White"], "answer": 1,
+      "change": { "camera": { "whiteBalance": "tungsten" }, "lights": { "fill": { "fixture": "cb60-rgb", "modifier": "cb60-softbox", "role": "fill", "on": true, "power": 0.4, "kelvin": 5600, "azimuthDeg": 40, "elevationDeg": 5, "distance": 1.5 } } },
+      "explain": "Mixing warm and cool lights gives two colours on one face. Here the camera matches the warm key, so the cooler fill looks blue." },
+    { "type": "task", "text": "Fix it: make both sides of the face the same colour. You can change the fill's colour temperature, or swap it for a different light.",
+      "check": [{ "metric": "colorCast", ">": -0.25 }, { "metric": "colorCast", "<": 0.25 }, { "light": "fill", "on": true }],
+      "hint": "Pick the fill light, open Colour, and slide Warm ↔ cool down to 3200 K to match the halogen key." },
+    { "type": "reflect", "prompt": "Why might a cinematographer mix warm and cool light on purpose?", "frames": ["Mixing warm and cool could show…", "For example, in a scene where…"] }
+  ]
+}

@@ -4,6 +4,7 @@
 import { ROLES, SIDES, LIMITS, makeLight, makeReflector, newId } from "../scene/schema.js";
 import { gear, fixture, modifier, reflectorItem, inventory, inventoryProblems, remaining, cameras, cameraGear, cameraView, lensesFor } from "../scene/gear.js";
 import { lightSpec, sceneWarnings } from "../scene/lightmath.js";
+import { linkify } from "../learn/vocab.js";
 
 let uid = 0;
 export function h(tag, attrs = {}, ...kids) {
@@ -244,7 +245,7 @@ export function createPanels(els, history, { onSelect, announce }) {
           h("h2", { class: "inspector-title" }, role.label),
           onSwitch,
           h("button", { type: "button", class: "icon", "data-key": "remove", "aria-label": "Remove this light", title: "Remove this light", onclick: () => remove(l.id) }, "✕")),
-        h("p", { class: "define" }, role.define));
+        h("p", { class: "define" }, linkify(role.define)));
       const groups = lightRows(s, l);
       rows = [roleSel, ...groups.basics, ...groups.aim, ...groups.colour, ...groups.beam, ...groups.about,
         { update(st) { const x = findLight(st); if (!x) return; onSwitch.setAttribute("aria-checked", x.on ? "true" : "false"); onSwitch.textContent = x.on ? "On" : "Off"; } }];
@@ -266,7 +267,7 @@ export function createPanels(els, history, { onSelect, announce }) {
           h("span", { class: "badge reflector", "aria-hidden": "true" }, "R"),
           h("h2", { class: "inspector-title" }, "Reflector"),
           h("button", { type: "button", class: "icon", "data-key": "remove", "aria-label": "Remove this reflector", title: "Remove this reflector", onclick: () => remove(r.id) }, "✕")),
-        h("p", { class: "define" }, "A card that bounces light back onto the subject, usually to lift the shadow side."));
+        h("p", { class: "define" }, linkify("A reflector bounces light back onto the subject, usually to lift the shadow side.")));
       rows = reflectorRows(s, r);
       els.inspector.append(...rows.map((x) => x.row));
     } else {

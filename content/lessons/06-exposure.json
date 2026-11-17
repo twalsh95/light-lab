@@ -1,0 +1,94 @@
+{
+  "type": "lessons",
+  "id": "exposure",
+  "status": "draft",
+  "title": "The camera's part: aperture, shutter, ISO",
+  "concept": "exposure",
+  "minutes": 8,
+  "standards": [
+    "MA MP-B Standard 5 (lighting, sets and props)"
+  ],
+  "standardsNote": "Tom asked for camera settings after the brief; this lesson is an extra (the brief lists five lessons).",
+  "steps": [
+    {
+      "type": "text",
+      "text": "Lights decide what the picture looks like; the camera decides how bright it comes out. Three settings work together: aperture, shutter speed and ISO. Each full stop doubles or halves the light."
+    },
+    {
+      "type": "setup",
+      "text": "Three-point lighting, with the camera on Auto.",
+      "scene": {
+        "preset": "threePoint",
+        "camera": {
+          "mode": "auto",
+          "body": "sony-a65",
+          "lens": "sony-dt-35",
+          "focalMm": 35
+        }
+      }
+    },
+    {
+      "type": "task",
+      "text": "Switch the camera to Manual (under the picture). It starts from Auto's settings, so the meter should read 0. Now make the shutter speed twice as long (for example 1/60 to 1/30).",
+      "check": [
+        {
+          "path": "camera.mode",
+          "eq": "manual"
+        },
+        {
+          "meter": true,
+          ">=": 0.7,
+          "<=": 1.3
+        }
+      ],
+      "hint": "The Auto / Manual buttons are in the bar under the camera view.",
+      "success": "The meter moved to +1: one stop brighter."
+    },
+    {
+      "type": "choose",
+      "question": "You made the shutter twice as long. What does the meter say now?",
+      "options": [
+        "−1 (darker)",
+        "+1 (brighter)",
+        "0 (no change)"
+      ],
+      "answer": 1,
+      "explain": "Twice as long lets in twice the light: one stop brighter."
+    },
+    {
+      "type": "task",
+      "text": "Get back to correct exposure (meter at 0) WITHOUT changing the shutter: use the aperture instead.",
+      "check": [
+        {
+          "path": "camera.mode",
+          "eq": "manual"
+        },
+        {
+          "meter": true,
+          ">=": -0.3,
+          "<=": 0.3
+        }
+      ],
+      "hint": "A bigger f-number (for example f/2.8 to f/4) lets in half the light."
+    },
+    {
+      "type": "choose",
+      "question": "Which setting also blurs the backdrop more when you change it?",
+      "options": [
+        "A wider aperture (smaller f-number)",
+        "A faster shutter",
+        "A higher ISO"
+      ],
+      "answer": 0,
+      "explain": "A wide aperture makes the depth of field shallow, so things behind the subject blur."
+    },
+    {
+      "type": "reflect",
+      "prompt": "You're in a dim room with no extra lights. Which setting would you change first, and what would it cost you?",
+      "frames": [
+        "I'd change … first because…",
+        "The cost is…"
+      ]
+    }
+  ]
+}

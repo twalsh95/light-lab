@@ -1,0 +1,27 @@
+{
+  "type": "lessons",
+  "id": "fill-mood",
+  "status": "draft",
+  "title": "The fill light is the mood dial",
+  "concept": "fill",
+  "minutes": 7,
+  "standards": ["MA GD-VC Standard 4 (lighting techniques)", "MA MP-B Standard 5 (lighting, sets and props)"],
+  "steps": [
+    { "type": "text", "text": "The key light sets the direction. The fill light sets the mood: a lot of fill feels open and friendly; a little fill feels serious and dramatic. Photographers call the difference between the two sides the lighting ratio." },
+    { "type": "setup", "text": "Start from a three-point setup.", "scene": { "preset": "threePoint" } },
+    { "type": "predict", "question": "Turn the fill light off. How does the mood change?",
+      "options": ["Brighter and friendlier", "Darker and more dramatic", "It doesn't change"], "answer": 1,
+      "change": { "lights": { "fill": { "on": false } } },
+      "explain": "Without fill, the shadow side drops into deep shadow. The same key light now feels much more dramatic." },
+    { "type": "task", "text": "Turn the fill back on and make the light gentle: get the shadow side less than half a stop darker than the lit side.",
+      "check": [{ "light": "fill", "on": true }, { "metric": "shadowStops", "<": 0.5 }],
+      "hint": "Move the fill closer to the subject, or raise its power. A white reflector on the shadow side helps too." },
+    { "type": "task", "text": "Now make it moody with the fill still ON: the shadow side should be at least 2.5 stops darker.",
+      "check": [{ "light": "fill", "on": true }, { "metric": "shadowStops", ">=": 2.5 }],
+      "hint": "Turn the fill's power right down, move it far away, or turn it so its beam misses the face." },
+    { "type": "choose", "question": "A lighting ratio of 4:1 means the lit side is four times as bright as the shadow side. How many stops is that?",
+      "options": ["1 stop", "2 stops", "4 stops"], "answer": 1, "explain": "Each stop doubles the light: 2 × 2 = 4, so 4:1 is 2 stops." },
+    { "type": "reflect", "prompt": "Describe a portrait you'd light with a lot of fill, and one you'd light with very little. Why does each one need that mood?",
+      "frames": ["For a … I'd use a lot of fill because…", "For a … I'd use very little fill because…"] }
+  ]
+}
